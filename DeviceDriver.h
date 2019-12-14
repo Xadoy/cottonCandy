@@ -2,24 +2,41 @@
 
 #ifndef HEADER_DEVICE_DRIVER
 #define HEADER_DEVICE_DRIVER
+
+#include "Arduino.h"
+
+typedef unsigned short address;
+
 class DeviceDriver{
 
 public:
     //Default Constructor
     DeviceDriver();
 
-    //Copy constructor
-    DeviceDriver(const DeviceDriver &driver);
-
     //Destructor
-    ~DeviceDriver();
+    virtual ~DeviceDriver();
 
-    int send(char* msg);
+    /**
+     * Initialize the driver by configuring it to the correct mode, frequency etc.
+     */
+    virtual bool init();
 
-    int recv(int byteToRead, char* buffer);
+    /**
+     * Send a stream of bytes. Takes a byte array and its length.
+     * Returns number of bytes successfully sent. Returns -1 if sending failed (timeout).
+     */
+    virtual int send(address destAddr, uint8_t channel, char* msg, long msgLen) = 0;
+
+    /**
+     * Returns a byte received. Returns -1 if none available
+     */
+    virtual char recv() = 0;
 
 private:
-
+    /**
+     * Default receive timeout is 5000 ms (5 seconds) 
+     */
+    unsigned int receiveTimeOut = 5000;
 };
 
 #endif

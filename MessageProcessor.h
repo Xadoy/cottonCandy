@@ -4,8 +4,6 @@
 
 #include "DeviceDriver.h"
 
-typedef unsigned short address;
-
 void sendBeacon();
 
 void sendBeaconACK(address destAddr);
