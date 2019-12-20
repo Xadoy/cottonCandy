@@ -24,9 +24,11 @@ class GenericMessage
 
 public:
     unsigned char type;
-    address addr;
+    address srcAddr;
 
-    virtual void send();
+    GenericMessage(unsigned char type, address srcAddr);
+    // return number of bytes sent
+    virtual int send(DeviceDriver* driver, address destAddr);
     void copyTypeAndAddr(char* msg);
 };
 
@@ -40,7 +42,8 @@ class CheckAlive: public GenericMessage
   public:
     unsigned char depth;
 
-    void send();
+    CheckAlive(unsigned char type, address srcAddr, unsigned char depth);
+    int send(DeviceDriver* driver, address destAddr);
 };
 
 class ReplyAlive: public GenericMessage{
@@ -51,7 +54,8 @@ class JoinConfirm: public GenericMessage
 public:
     unsigned char depth;
 
-    void send();
+    JoinConfirm(unsigned char type, address srcAddr, unsigned char depth);
+    int send(DeviceDriver* driver, address destAddr);
 };
 
 class GatewayRequest: public GenericMessage
@@ -59,7 +63,8 @@ class GatewayRequest: public GenericMessage
 public:
     unsigned char seqNum;
 
-    void send();
+    GatewayRequest(unsigned char type, address srcAddr, unsigned char seqNum);
+    int send(DeviceDriver* driver, address destAddr);
 };
 
 class NodeReply: public GenericMessage
@@ -70,7 +75,9 @@ public:
     unsigned char dataLength;
     char data[8];
 
-    void send();
+    NodeReply(unsigned char type, address srcAddr, unsigned char numOfNodes, unsigned char seqNum, 
+                unsigned char dataLength, char data[8]);
+    int send(DeviceDriver* driver, address destAddr);
 };
 
 GenericMessage* receiveMessage();

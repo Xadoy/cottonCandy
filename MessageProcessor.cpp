@@ -1,24 +1,25 @@
 #include "MessageProcessor.h"
 #include <string.h>
 
-/*
-Note:
-Little Endian reverse the order by bytes
-e.g. 
-addr = 0x1234 
-addr[0] = 34 addr[1] = 12
-*/
+
+GenericMessage::GenericMessage(unsigned char type, address srcAddr)
+{
+  this->type = type;
+  this->srcAddr = srcAddr;
+}
+
+//Note:Little Endian reverse the order of bytes
 
 void GenericMessage::copyTypeAndAddr(char* msg)
 {
   msg[0] = this->type;
   //reverse the bytes
-  msg[1] = ((unsigned char *)&(this->addr))[1];
-  msg[2] = ((unsigned char *)&(this->addr))[0];
+  msg[1] = ((unsigned char *)&(this->srcAddr))[1];
+  msg[2] = ((unsigned char *)&(this->srcAddr))[0];
 }
 
 
-void GenericMessage::send()
+int GenericMessage::send(DeviceDriver* driver, address destAddr)
 {
   char msg[3]; 
   copyTypeAndAddr(msg);
@@ -26,7 +27,14 @@ void GenericMessage::send()
   //send out using device driver
 }
 
-void CheckAlive::send()
+CheckAlive::CheckAlive(unsigned char type, address srcAddr, unsigned char depth)
+{
+  this->type = type;
+  this->srcAddr = srcAddr;
+  this->depth = depth;
+}
+
+int CheckAlive::send(DeviceDriver* driver, address destAddr)
 {
   char msg[4];
   copyTypeAndAddr(msg);
@@ -36,7 +44,14 @@ void CheckAlive::send()
   //send out using device driver
 }
 
-void JoinConfirm::send()
+JoinConfirm::JoinConfirm(unsigned char type, address srcAddr, unsigned char depth)
+{
+  this->type = type;
+  this->srcAddr = srcAddr;
+  this->depth = depth;
+}
+
+int JoinConfirm::send(DeviceDriver* driver, address destAddr)
 {
   char msg[4];
   copyTypeAndAddr(msg);
@@ -46,7 +61,14 @@ void JoinConfirm::send()
   //send out using device driver
 }
 
-void GatewayRequest::send()
+GatewayRequest::GatewayRequest(unsigned char type, address srcAddr, unsigned char seqNum)
+{
+  this->type = type;
+  this->srcAddr = srcAddr;
+  this->seqNum = seqNum;
+}
+
+int GatewayRequest::send(DeviceDriver* driver, address destAddr)
 {
   char msg[4];
   copyTypeAndAddr(msg);
@@ -56,7 +78,18 @@ void GatewayRequest::send()
   //send out using device driver
 }
 
-void NodeReply::send()
+NodeReply::NodeReply(unsigned char type, address srcAddr, unsigned char numOfNodes, unsigned char seqNum, 
+                unsigned char dataLength, char data[8])
+{
+  this->type = type;
+  this->srcAddr = srcAddr;
+  this->numOfNodes = numOfNodes;
+  this->seqNum = seqNum;
+  this->dataLength = dataLength;
+  strcpy(this->data, data);
+}
+
+int NodeReply::send(DeviceDriver* driver, address destAddr)
 {
   char msg[14];
   copyTypeAndAddr(msg);
