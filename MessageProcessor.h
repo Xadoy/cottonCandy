@@ -60,7 +60,7 @@ public:
     unsigned char seqNum;
 
     void send();
-}
+};
 
 class NodeReply: public GenericMessage
 {
@@ -68,10 +68,10 @@ public:
     unsigned char numOfNodes;
     unsigned char seqNum;
     unsigned char dataLength;
-    char[8] data;
+    char data[8];
 
     void send();
-}
+};
 
 GenericMessage* receiveMessage();
 
