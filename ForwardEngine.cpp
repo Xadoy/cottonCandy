@@ -52,8 +52,10 @@ bool ForwardEngine::join()
     GenericMessage *msg = nullptr;
     address bestParentAddr = myAddr;
 
+    Join beacon(myAddr);
+    
     //Send out the beacon once
-    sendBeacon();
+    beacon.send(myDriver, BROADCAST_ADDR);
 
     //Give some time for the transimission and replying
     sleepForMillis(500);
@@ -68,9 +70,9 @@ bool ForwardEngine::join()
      *          3. Beacon CFM (sent by a child)
      * 
      * It is possible that the node did not receive any above messages at all. In this case, the
-     * loop will timeout after a period of DISCOVERY_TIME. 
+     * loop will timeout after a period of DISCOVERY_TIMEOUT. 
      */
-    while (getTimeMillis() - previousTime < DISCOVERY_TIME)
+    while (getTimeMillis() - previousTime < DISCOVERY_TIMEOUT)
     {
 
         //Now try to receive the message
@@ -83,11 +85,12 @@ bool ForwardEngine::join()
 
         switch (msg->type)
         {
-        case 2:
+        case MESSAGE_JOIN_ACK:
             //If it receives an ACK sent by a potential parent, compare with the current parent
+            
             break;
 
-        case 1:
+        case MESSAGE_JOIN:
             //If it receives an Beacon from another node (Potentail child), check the capability
             //and decide the action (Send back ACK or ignore)
             break;
@@ -98,16 +101,26 @@ bool ForwardEngine::join()
     {
         //If a parent other than itself is found. Set the parentAddr and send an CFM back
         this->parentAddr = bestParentAddr;
-        sendBeaconCFM(this->parentAddr);
+        
+        //TODO: Send the CFM back
     }
 }
 
 bool ForwardEngine::run()
 {
 
+    //If the node is a gateway, it does not have to join the network to operate
+    if(myAddr & 0x80){
+        state = JOINED;
+    }
+
+    //If it is an ordinary node, it needs to join the network to operate
     while(state == INIT){
         if(join()){
             state = JOINED;
+        }else{
+            Serial.println("Joining unsuccessful. Retry join in 5 seconds");
+            sleepForMillis(5000);
         }
     }
     
@@ -120,10 +133,10 @@ bool ForwardEngine::run()
         //Based on the receved message, do the corresponding actions
         switch (msg->type)
         {
-        case 1:
+        case MESSAGE_JOIN:
             break;
 
-        case 2:
+        case MESSAGE_JOIN_ACK:
             break;
         }
 
@@ -139,11 +152,11 @@ bool ForwardEngine::run()
 
 bool ForwardEngine::checkParentAlive()
 {
-    sendBeacon();
+    //TODO: Send out the checkAlive message
 
     GenericMessage* msg = receiveMessage();
 
-    if(msg!=nullptr && msg->type == 3){
+    if(msg!=nullptr && msg->type == MESSAGE_REPLY_ALIVE){
         //Parent reply has been received
         return true;
     }

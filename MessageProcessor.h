@@ -4,10 +4,10 @@
 
 #define MESSAGE_JOIN              1
 #define MESSAGE_JOIN_ACK          2
-#define MESSAGE_JOIN_CONFIRM      3
+#define MESSAGE_JOIN_CFM          3
 #define MESSAGE_CHECK_ALIVE       4
 #define MESSAGE_REPLY_ALIVE       5
-#define MESSAGE_GATEWAY_REQUEST   6
+#define MESSAGE_GATEWAY_REQ       6
 #define MESSAGE_NODE_REPLY        7
 
 #include "DeviceDriver.h"
@@ -25,6 +25,11 @@ class GenericMessage
 public:
     unsigned char type;
     address srcAddr;
+    
+    /**
+     * For every message receveid, there will be an RSSI value associated
+     */
+    unsigned char rssi;
 
     GenericMessage(unsigned char type, address srcAddr);
     // return number of bytes sent
@@ -32,41 +37,59 @@ public:
     void copyTypeAndAddr(char* msg);
 };
 
+/*--------------------Join Beacon-------------------*/
 class Join: public GenericMessage{
-};
-class JoinAck: public GenericMessage{
+
+public:
+    Join(address srcAddr);
 };
 
+/*--------------------JoinACK Message-------------------*/
+class JoinAck: public GenericMessage{
+
+public:
+    JoinAck(address srcAddr);
+
+};
+
+/*--------------------JoinCFM Message-------------------*/
+class JoinCFM: public GenericMessage
+{
+public:
+    unsigned char depth;
+
+    JoinCFM(address srcAddr, unsigned char depth);
+    int send(DeviceDriver* driver, address destAddr);
+};
+
+/*--------------------CheckAlive Message-------------------*/
 class CheckAlive: public GenericMessage
 {
   public:
     unsigned char depth;
 
-    CheckAlive(unsigned char type, address srcAddr, unsigned char depth);
+    CheckAlive(address srcAddr, unsigned char depth);
     int send(DeviceDriver* driver, address destAddr);
 };
 
+/*--------------------ReplyAlive Message-------------------*/
 class ReplyAlive: public GenericMessage{
-};
-
-class JoinConfirm: public GenericMessage
-{
 public:
-    unsigned char depth;
-
-    JoinConfirm(unsigned char type, address srcAddr, unsigned char depth);
-    int send(DeviceDriver* driver, address destAddr);
+    ReplyAlive(address srcAddr);
 };
 
+
+/*--------------------GatewayRequest Message-------------------*/
 class GatewayRequest: public GenericMessage
 {
 public:
     unsigned char seqNum;
 
-    GatewayRequest(unsigned char type, address srcAddr, unsigned char seqNum);
+    GatewayRequest(address srcAddr, unsigned char seqNum);
     int send(DeviceDriver* driver, address destAddr);
 };
 
+/*--------------------NodeReply Message-------------------*/
 class NodeReply: public GenericMessage
 {
 public:
@@ -75,7 +98,7 @@ public:
     unsigned char dataLength;
     char data[8];
 
-    NodeReply(unsigned char type, address srcAddr, unsigned char numOfNodes, unsigned char seqNum, 
+    NodeReply(address srcAddr, unsigned char numOfNodes, unsigned char seqNum, 
                 unsigned char dataLength, char data[8]);
     int send(DeviceDriver* driver, address destAddr);
 };

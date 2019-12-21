@@ -16,7 +16,7 @@
 #define GATEWAY_ADDRESS_MASK 0x8000
 
 /* The default time for discovery is 10 seconds */
-#define DISCOVERY_TIME 10000
+#define DISCOVERY_TIMEOUT 10000
 
 class ForwardEngine{
 

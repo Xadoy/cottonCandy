@@ -5,6 +5,8 @@
 
 #include "Arduino.h"
 
+#define BROADCAST_ADDR 0xFFFF
+
 typedef unsigned short address;
 
 class DeviceDriver{

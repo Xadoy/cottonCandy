@@ -18,19 +18,44 @@ void GenericMessage::copyTypeAndAddr(char* msg)
   msg[2] = ((unsigned char *)&(this->srcAddr))[0];
 }
 
-
 int GenericMessage::send(DeviceDriver* driver, address destAddr)
 {
   char msg[3]; 
   copyTypeAndAddr(msg);
 
-  //send out using device driver
+  //TODO: send out using device driver
 }
 
-CheckAlive::CheckAlive(unsigned char type, address srcAddr, unsigned char depth)
+/*--------------------Join Beacon-------------------*/
+Join::Join(address srcAddr) : GenericMessage(MESSAGE_JOIN, srcAddr){
+
+}
+
+
+/*--------------------JoinACK Message-------------------*/
+JoinAck::JoinAck(address srcAddr) : GenericMessage(MESSAGE_JOIN_ACK, srcAddr){
+
+}
+
+/*--------------------JoinCFM Message-------------------*/
+JoinCFM::JoinCFM(address srcAddr, unsigned char depth) : GenericMessage(MESSAGE_JOIN_CFM, srcAddr)
 {
-  this->type = type;
-  this->srcAddr = srcAddr;
+  this->depth = depth;
+}
+
+int JoinCFM::send(DeviceDriver* driver, address destAddr)
+{
+  char msg[4];
+  copyTypeAndAddr(msg);
+
+  msg[3] = this->depth;
+
+  //TODO: send out using device driver
+}
+
+/*--------------------CheckAlive Message-------------------*/
+CheckAlive::CheckAlive(address srcAddr, unsigned char depth) : GenericMessage(MESSAGE_CHECK_ALIVE, srcAddr)
+{
   this->depth = depth;
 }
 
@@ -41,30 +66,18 @@ int CheckAlive::send(DeviceDriver* driver, address destAddr)
 
   msg[3] = this->depth;
 
-  //send out using device driver
+  //TODO: send out using device driver
 }
 
-JoinConfirm::JoinConfirm(unsigned char type, address srcAddr, unsigned char depth)
-{
-  this->type = type;
-  this->srcAddr = srcAddr;
-  this->depth = depth;
+
+/*--------------------ReplyAlive Message-------------------*/
+ReplyAlive::ReplyAlive(address srcAddr) : GenericMessage(MESSAGE_REPLY_ALIVE, srcAddr){
+  
 }
 
-int JoinConfirm::send(DeviceDriver* driver, address destAddr)
+/*--------------------GatewayRequest Message-------------------*/
+GatewayRequest::GatewayRequest(address srcAddr, unsigned char seqNum): GenericMessage(MESSAGE_GATEWAY_REQ, srcAddr)
 {
-  char msg[4];
-  copyTypeAndAddr(msg);
-
-  msg[3] = this->depth;
-
-  //send out using device driver
-}
-
-GatewayRequest::GatewayRequest(unsigned char type, address srcAddr, unsigned char seqNum)
-{
-  this->type = type;
-  this->srcAddr = srcAddr;
   this->seqNum = seqNum;
 }
 
@@ -75,11 +88,12 @@ int GatewayRequest::send(DeviceDriver* driver, address destAddr)
 
   msg[3] = this->seqNum;
 
-  //send out using device driver
+  //TODO: send out using device driver
 }
 
-NodeReply::NodeReply(unsigned char type, address srcAddr, unsigned char numOfNodes, unsigned char seqNum, 
-                unsigned char dataLength, char data[8])
+/*--------------------NodeReply Message-------------------*/
+NodeReply::NodeReply(address srcAddr, unsigned char numOfNodes, unsigned char seqNum, 
+                unsigned char dataLength, char data[8]) : GenericMessage(MESSAGE_NODE_REPLY, srcAddr)
 {
   this->type = type;
   this->srcAddr = srcAddr;
@@ -103,7 +117,7 @@ int NodeReply::send(DeviceDriver* driver, address destAddr)
     msg[6 + i] = data[i];
   }
 
-  //send out using device driver
+  //TODO: send out using device driver
 }
 
 

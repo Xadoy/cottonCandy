@@ -1,6 +1,7 @@
 #ifndef HEADER_EBYTE_DEVICE_DRIVER
 #define HEADER_EBYTE_DEVICE_DRIVER
 
+#include "Arduino.h"
 #include "DeviceDriver.h"
 #include "SoftwareSerial.h"
 
