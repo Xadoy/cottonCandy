@@ -3,7 +3,7 @@
 #define DEBUG 1
 
 EbyteDeviceDriver::EbyteDeviceDriver(uint8_t rx, uint8_t tx, uint8_t m0, uint8_t m1, uint8_t aux_pin, address addr, 
-                                    uint8_t channel) : DeviceDriver(){
+                                    ) : DeviceDriver(){
     this->rx = rx;
     this->tx = tx;
     this->m0 = m0;
@@ -53,11 +53,11 @@ bool EbyteDeviceDriver::init(){
  * enables hardware address filtering in the Ebyte transceiver. Also broadcast can easily be done by
  * setting dest address to FFFF;
  */ 
-int EbyteDeviceDriver::send(address destAddr, uint8_t channel, char* msg, long msgLen){
+int EbyteDeviceDriver::send(address destAddr, char* msg, long msgLen){
     char data[3 + msgLen];
     data[0] = (destAddr >> 8) & 0xFF;
     data[1] = destAddr & 0xFF;
-    data[2] = (char)channel;
+    data[2] = (char)myChannel;
     strncpy(data + 3, msg, msgLen);
     return (module->write(data, sizeof(data)));
 }

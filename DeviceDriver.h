@@ -27,7 +27,7 @@ public:
      * Send a stream of bytes. Takes a byte array and its length.
      * Returns number of bytes successfully sent. Returns -1 if sending failed (timeout).
      */
-    virtual int send(address destAddr, uint8_t channel, char* msg, long msgLen) = 0;
+    virtual int send(address destAddr, char* msg, long msgLen) = 0;
 
     /**
      * Returns a byte received. Returns -1 if none available

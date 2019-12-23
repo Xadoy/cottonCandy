@@ -12,7 +12,7 @@ bool DeviceDriver::init(){
     return true;
 }
 
-int DeviceDriver::send(address destAddr, uint8_t channel, char* msg, long msgLen){
+int DeviceDriver::send(address destAddr, char* msg, long msgLen){
     Serial.println("Send not implemented in this dummy driver");
     return -1;
 }

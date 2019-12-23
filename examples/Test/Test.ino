@@ -23,7 +23,7 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  myDriver->send(0x5678,9, "Hello World", 11);
+  myDriver->send(0x5678, "Hello World", 11);
   delay(3000);
 
 }
