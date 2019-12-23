@@ -23,7 +23,7 @@ public:
 
     bool init();
 
-    int send(address destAddr, uint8_t channel, char* msg, long msgLen);
+    int send(address destAddr, char* msg, long msgLen);
 
     char recv();
 
