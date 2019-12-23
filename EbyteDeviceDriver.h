@@ -27,6 +27,8 @@ public:
 
     char recv();
 
+    int getLastMessageRssi();
+
 private:
     SoftwareSerial* module;
     uint8_t rx;

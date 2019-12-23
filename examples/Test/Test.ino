@@ -13,12 +13,12 @@ DeviceDriver* myDriver;
 address myAddr = 1;
 
 void setup() {
-    myDriver = new EbyteDeviceDriver(LORA_RX, LORA_TX, LORA_M0, LORA_M1, LORA_AUX, myAddr, (uint8_t)9);
-    //myEngine = new ForwardEngine(myAddr,myDriver);
+    myDriver = new EbyteDeviceDriver(LORA_RX, LORA_TX, LORA_M0, LORA_M1, LORA_AUX, myAddr, 9);
+    myEngine = new ForwardEngine(myAddr,myDriver);
     myDriver->init();
 
     
-    //delete myEngine;
+    delete myEngine;
 }
 
 void loop() {

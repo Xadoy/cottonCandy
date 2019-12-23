@@ -72,6 +72,10 @@ char EbyteDeviceDriver::recv(){
    }
 }
 
+int EbyteDeviceDriver::getLastMessageRssi(){
+    return 0;
+}
+
 void EbyteDeviceDriver::enterConfigMode()
 {
     digitalWrite(this->m0, LOW);

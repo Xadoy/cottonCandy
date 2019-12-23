@@ -11,6 +11,13 @@ ForwardEngine::ForwardEngine(address addr, DeviceDriver* driver)
 {
     myAddr = addr;
     myDriver = driver;
+
+    //Initialize the parent. Set the parent to itself.
+    myParent.parentAddr = myAddr;
+    myParent.hopsToGateway = -1;
+    myParent.lastRssi = -100;
+
+    numChildren = 0;
 }
 
 ForwardEngine::~ForwardEngine()
@@ -30,7 +37,7 @@ address ForwardEngine::getMyAddr()
 
 address ForwardEngine::getParentAddr()
 {
-    return this->parentAddr;
+    return this->myParent.parentAddr;
 }
 
 /**
@@ -46,15 +53,17 @@ bool ForwardEngine::join()
 {
     if (state != INIT)
     {
+        //The node has already joined a network
         return false;
     }
 
     GenericMessage *msg = nullptr;
-    address bestParentAddr = myAddr;
+    
+    ParentInfo bestParentCandidate = myParent;
 
     Join beacon(myAddr);
     
-    //Send out the beacon once
+    //Send out the beacon once to discover nearby nodes
     beacon.send(myDriver, BROADCAST_ADDR);
 
     //Give some time for the transimission and replying
@@ -66,8 +75,7 @@ bool ForwardEngine::join()
      * In this loop, for a period of DISCOVERY_TIME, the node will wait for the following types 
      * of incoming messages:
      *          1. Beacon ACK (sent by a potential parent)
-     *          2. Beacon (sent by a potential child)
-     *          3. Beacon CFM (sent by a child)
+     *          4. For any other types of message, the node will discard them
      * 
      * It is possible that the node did not receive any above messages at all. In this case, the
      * loop will timeout after a period of DISCOVERY_TIMEOUT. 
@@ -80,29 +88,69 @@ bool ForwardEngine::join()
         msg = receiveMessage();
 
         if(msg == nullptr){
+            //If no message has been received
             continue;
         }
+
+        address nodeAddr = msg->srcAddr;
 
         switch (msg->type)
         {
         case MESSAGE_JOIN_ACK:
-            //If it receives an ACK sent by a potential parent, compare with the current parent
-            
-            break;
+            //If it receives an ACK sent by a potential parent, compare with the current parent candidate
+            int newHopsToGateway = ((JoinAck*)msg) -> hopsToGateway;
 
-        case MESSAGE_JOIN:
-            //If it receives an Beacon from another node (Potentail child), check the capability
-            //and decide the action (Send back ACK or ignore)
+            //Need to find another way to get the RSSI value
+            uint8_t newRssi = myDriver->getLastMessageRssi();
+
+            if(newHopsToGateway != -1){
+                //The remote node has a connection to the gateway
+                if (bestParentCandidate.hopsToGateway != -1){
+                    //Case 1: Both the current parent candidate and new node are connected to the gateway
+                    //Choose the candidate with the minimum hops to the gateway while the RSSI is over the threshold
+                    //Note that the RSSI value returned here is positive, thus the smaller RSSI is better.
+
+                    if(newRssi <= RSSI_THRESHOLD && newHopsToGateway < bestParentCandidate.hopsToGateway){
+                        bestParentCandidate.parentAddr = nodeAddr;
+                        bestParentCandidate.hopsToGateway = newHopsToGateway;
+                        bestParentCandidate.lastRssi = newRssi;
+                    }
+                    
+                }else{
+                    //Case 2: Only the new node is connected to the gateway
+                    //We always favor the candidate with a connection to the gateway
+                    bestParentCandidate.parentAddr = nodeAddr;
+                    bestParentCandidate.hopsToGateway = newHopsToGateway;
+                    bestParentCandidate.lastRssi = newRssi;
+                }
+
+            }
+            //This case is currently ignored
+            /*
+            else if (bestParentCandidate.hopsToGateway == -1){
+                //Case 3: Both the current and new parent candidates does not have a connection to the gateway
+                //Compare the node address. The smaller node address should be the parent (gateway address is always larger than regular node address)
+                if(nodeAddr < bestParentCandidate.parentAddr){
+                    bestParentCandidate.parentAddr = nodeAddr;
+                    bestParentCandidate.hopsToGateway = newHopsToGateway;
+                    bestParentCandidate.lastRssi = newRssi;
+                }
+            }
+            */
+
+            //Other cases involve: new node -> not connected to gateway, current best parent -> connected to the gateway
+            //In this case we will not update the best parent candidate
             break;
         }
     }
 
-    if (bestParentAddr != this->myAddr)
-    {
-        //If a parent other than itself is found. Set the parentAddr and send an CFM back
-        this->parentAddr = bestParentAddr;
-        
-        //TODO: Send the CFM back
+    if(bestParentCandidate.parentAddr != myAddr){
+        myParent = bestParentCandidate;
+        JoinCFM cfm(myAddr, numChildren);
+        cfm.send(myDriver, myParent.parentAddr);
+        return true;
+    }else{
+        return false;
     }
 }
 
@@ -110,16 +158,17 @@ bool ForwardEngine::run()
 {
 
     //If the node is a gateway, it does not have to join the network to operate
+    //Gateway is distinguished by the highest bit = 1
     if(myAddr & 0x80){
         state = JOINED;
     }
 
-    //If it is an ordinary node, it needs to join the network to operate
+    //If it is a regular node, it needs to join the network to operate
     while(state == INIT){
         if(join()){
             state = JOINED;
         }else{
-            Serial.println("Joining unsuccessful. Retry join in 5 seconds");
+            Serial.println("Joining unsuccessful. Retry joining in 5 seconds");
             sleepForMillis(5000);
         }
     }
@@ -130,29 +179,43 @@ bool ForwardEngine::run()
     {
         msg = receiveMessage();
 
-        //Based on the receved message, do the corresponding actions
-        switch (msg->type)
-        {
-        case MESSAGE_JOIN:
-            break;
+        if(msg != nullptr){
 
-        case MESSAGE_JOIN_ACK:
-            break;
+            address nodeAddr = msg->srcAddr;
+
+            //Based on the receved message, do the corresponding actions
+            switch (msg->type)
+            {
+            case MESSAGE_JOIN:
+                //TODO: Send back JOIN_ACK with information
+                JoinAck ack(myAddr, myParent.hopsToGateway + 1);
+                ack.send(myDriver, nodeAddr);
+                break;
+
+            case MESSAGE_JOIN_CFM:
+                //TODO: Add the node to the children list
+                break;
+            }
+
         }
 
+        //Check if the parent is still alive
         //If the parent is not found anymore, exit the connection
         if (!checkParentAlive())
         {
             state = INIT;
-            return 1;
+            break;
         }
     }
+
     return 1;
 }
 
 bool ForwardEngine::checkParentAlive()
 {
     //TODO: Send out the checkAlive message
+    CheckAlive check(myAddr, 0);
+    check.send(myDriver, myParent.parentAddr);
 
     GenericMessage* msg = receiveMessage();
 

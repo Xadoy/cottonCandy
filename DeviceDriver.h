@@ -34,6 +34,8 @@ public:
      */
     virtual char recv() = 0;
 
+    virtual int getLastMessageRssi() = 0;
+
 private:
     /**
      * Default receive timeout is 5000 ms (5 seconds) 
