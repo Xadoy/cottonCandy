@@ -3,7 +3,7 @@
 #define DEBUG 1
 
 EbyteDeviceDriver::EbyteDeviceDriver(uint8_t rx, uint8_t tx, uint8_t m0, uint8_t m1, uint8_t aux_pin, address addr, 
-                                    ) : DeviceDriver(){
+                                    uint8_t channel) : DeviceDriver(){
     this->rx = rx;
     this->tx = tx;
     this->m0 = m0;
