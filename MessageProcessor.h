@@ -13,12 +13,7 @@
 #include "DeviceDriver.h"
 
 /* We will use polymorphism here */
-/*
-  Generic Message can be directly used for the following types:
-  MESSAGE_JOIN
-  MESSAGE_JOIN_ACK
-  MESSAGE_REPLY_ALIVE
-*/
+
 class GenericMessage
 {
 
@@ -38,17 +33,18 @@ public:
 };
 
 /*--------------------Join Beacon-------------------*/
-class Join: public GenericMessage{
-
+class Join: public GenericMessage
+{
 public:
     Join(address srcAddr);
 };
 
 /*--------------------JoinACK Message-------------------*/
-class JoinAck: public GenericMessage{
-
+class JoinAck: public GenericMessage
+{
 public:
-    JoinAck(address srcAddr);
+    int hopsToGateway;
+    JoinAck(address srcAddr, int hopsToGateway);
 
 };
 
@@ -65,7 +61,7 @@ public:
 /*--------------------CheckAlive Message-------------------*/
 class CheckAlive: public GenericMessage
 {
-  public:
+public:
     unsigned char depth;
 
     CheckAlive(address srcAddr, unsigned char depth);
@@ -73,7 +69,8 @@ class CheckAlive: public GenericMessage
 };
 
 /*--------------------ReplyAlive Message-------------------*/
-class ReplyAlive: public GenericMessage{
+class ReplyAlive: public GenericMessage
+{
 public:
     ReplyAlive(address srcAddr);
 };
@@ -96,7 +93,7 @@ public:
     unsigned char numOfNodes;
     unsigned char seqNum;
     unsigned char dataLength;
-    char data[8];
+    char data[128];
 
     NodeReply(address srcAddr, unsigned char numOfNodes, unsigned char seqNum, 
                 unsigned char dataLength, char data[8]);
