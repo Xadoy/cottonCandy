@@ -18,16 +18,33 @@
 /* The default time for discovery is 10 seconds */
 #define DISCOVERY_TIMEOUT 10000
 
+/* The default timeout value for receiving a message is 5 seconds */
+#define RECEIVE_TIMEOUT 5000
+
 /* The RSSI threshold for choosing a parent node */
 #define RSSI_THRESHOLD 60
 
 /* The maximum number of children a node can have */
 #define MAX_NUM_CHILDREN 5
 
+/* The default time interval for checking if the parent is alive */
+#define DEFAULT_CHECK_ALIVE_INTERVAL 30000
+
+/* The default time interval for checking if the parent is alive */
+#define CHECK_ALIVE_TIMEOUT 10000
+
 struct ParentInfo{
-    address parentAddr;
+    unsigned long lastAliveTime;
     int hopsToGateway;
-    uint8_t lastRssi;
+    
+    address parentAddr;
+    uint8_t Rssi;  
+};
+
+struct ChildNode{
+    address nodeAddr;
+
+    ChildNode* next;
 };
 
 class ForwardEngine{
@@ -74,9 +91,6 @@ public:
      */
     bool run();
 
-    int send();
-
-    int receive();
 
     //Setter for the node address
     void setAddr(address addr);
@@ -97,13 +111,20 @@ private:
      */
     address myAddr;
 
-    //DeviceDriver driver;
+    /**
+     * DeviceDriver driver;
+     */ 
     DeviceDriver* myDriver;
 
     /**
      * A record of current parent
      */
     ParentInfo myParent;
+
+    /**
+     * Hops to the gateway
+     */ 
+    int hopsToGateway; 
 
     /**
      * Current State
@@ -116,14 +137,11 @@ private:
     uint8_t numChildren;
 
     /**
-     * Check if the parent is alive by sending a message to the parent and receiving an ACK.
-     * Returns true if the parent replied before the timeout (alive).
+     * A linked list of children nodes
      */
-    bool checkParentAlive();
+    ChildNode* childrenList;
 
-    /**
-     * List of children nodes
-     */ 
+    unsigned long checkAliveInterval;
 
 };
 

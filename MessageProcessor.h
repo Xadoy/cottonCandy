@@ -100,6 +100,6 @@ public:
     int send(DeviceDriver* driver, address destAddr);
 };
 
-GenericMessage* receiveMessage();
+GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout);
 
 #endif

@@ -1,5 +1,6 @@
 #include "MessageProcessor.h"
 #include <string.h>
+#include "Utilities.h"
 
 
 GenericMessage::GenericMessage(unsigned char type, address srcAddr)
@@ -139,8 +140,16 @@ int NodeReply::send(DeviceDriver* driver, address destAddr)
     return ( driver->send(destAddr, msg, sizeof(msg)) );
 }
 
-GenericMessage* receiveMessage()
+GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
 {
+    unsigned long startTime = getTimeMillis();
 
+    /*
+    while(getTimeMillis() - startTime < timeout){
+        
+    }
+    */
+   return nullptr;
+   
 }
 
