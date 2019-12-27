@@ -208,7 +208,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
 
             unsigned char depth = buff[2];
 
-            msg = new JoinAck(srcAddr, depth);
+            msg = new JoinCFM(srcAddr, depth);
             delete[] buff;
             break;
 
