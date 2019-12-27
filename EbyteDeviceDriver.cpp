@@ -40,6 +40,7 @@ bool EbyteDeviceDriver::init(){
     setChannel(myChannel);
     setNetId(0x00);
     setOthers(0x40);
+    setEnableRSSI();
 
     enterTransMode();
     Serial.println("Enter Transmission Mode");
@@ -243,4 +244,18 @@ void EbyteDeviceDriver::receiveConfigReply(int replyLen)
         }
     }
     //Serial.print("\n");
+}
+
+void EbyteDeviceDriver::setEnableRSSI()
+{
+  module->write(0xC0);
+  module->write(0x04);
+  module->write(0x01);
+  module->write(0x20);
+
+  //Read the reply to clear the buffer
+  receiveConfigReply(4);
+  if(DEBUG){
+    Serial.println("Successfully enable RSSI");
+  }
 }

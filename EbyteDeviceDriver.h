@@ -46,6 +46,7 @@ private:
     void setChannel(uint8_t channe);
     void setNetId(uint8_t netId);
     void setOthers(byte config);
+    void setEnableRSSI();
 
     void enterConfigMode();
     void enterTransMode();
