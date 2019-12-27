@@ -172,7 +172,8 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
         // get the whole message from device buffer
         switch(msgType)
         {
-        case MESSAGE_JOIN: 
+        case MESSAGE_JOIN:
+        {
             // we have already read the msg type
             char* buff = readMsgFromBuff(driver, MSG_LEN_JOIN - 1);
 
@@ -183,8 +184,10 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
             msg = new Join(srcAddr);
             delete[] buff;
             break;
+        }        
 
         case MESSAGE_JOIN_ACK:
+        {
             // we have already read the msg type
             char* buff = readMsgFromBuff(driver, MSG_LEN_JOIN_ACK - 1);
 
@@ -197,8 +200,10 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
             msg = new JoinAck(srcAddr, hopsToGateway);
             delete[] buff;
             break;
+        }
 
         case MESSAGE_JOIN_CFM:
+        {
             // we have already read the msg type
             char* buff = readMsgFromBuff(driver, MSG_LEN_JOIN_CFM - 1);
 
@@ -211,8 +216,10 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
             msg = new JoinCFM(srcAddr, depth);
             delete[] buff;
             break;
+        }
 
         case MESSAGE_CHECK_ALIVE:
+        {
             // we have already read the msg type
             char* buff = readMsgFromBuff(driver, MSG_LEN_CHECK_ALIVE - 1);
 
@@ -225,8 +232,10 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
             msg = new CheckAlive(srcAddr, depth);
             delete[] buff;
             break;
+        }
 
         case MESSAGE_REPLY_ALIVE:
+        {
             // we have already read the msg type
             char* buff = readMsgFromBuff(driver, MSG_LEN_REPLY_ALIVE - 1);
 
@@ -234,13 +243,13 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
             address srcAddr;
             memmove(&srcAddr, buff, 2);
 
-            unsigned char seqNum = buff[2];
-
-            msg = new ReplyAlive(srcAddr, seqNum);
+            msg = new ReplyAlive(srcAddr);
             delete[] buff;
             break;
+        }
 
         case MESSAGE_GATEWAY_REQ:
+        {
             // we have already read the msg type
             char* buff = readMsgFromBuff(driver, MSG_LEN_GATEWAY_REQ - 1);
 
@@ -253,10 +262,18 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
             msg = new GatewayRequest(srcAddr, depth);
             delete[] buff;
             break;
+        }
 
         case MESSAGE_NODE_REPLY:
+        {
             // we have already read the msg type
             // need to know the data length before getting the data
+            char addr[2];
+            addr[0] = driver->recv();
+            addr[1] = driver->recv();
+            address srcAddr;
+            memmove(&srcAddr, addr, 2);
+
             unsigned char numOfNodes = driver->recv();
             unsigned char seqNum = driver->recv();
             unsigned char dataLength = driver->recv();
@@ -267,6 +284,10 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
             delete[] data;
             break;
         }
+        
+        default:
+            return nullptr;
+        }
         msg->rssi = driver->getLastMessageRssi();
         return msg;
     }
@@ -276,7 +297,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
 
 
 /*-------------------- Helpers -------------------*/
-char* readMsgFromBuff(DeviceDriver* driver, u_int8_t msgLen)
+char* readMsgFromBuff(DeviceDriver* driver, uint8_t msgLen)
 {
     char* buff = new char[msgLen];
     for(int i = 0; i < msgLen; i++)

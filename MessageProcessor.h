@@ -33,7 +33,7 @@ public:
     /**
      * For every message receveid, there will be an RSSI value associated
      */
-    unsigned char rssi;
+    uint8_t rssi;
 
     GenericMessage(unsigned char type, address srcAddr);
     // return number of bytes sent
@@ -120,7 +120,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout);
  * Read certain bytes from device buffer
  * !! Caller needs to free the memory after using the returned pointer
  */
-char* readMsgFromBuff(DeviceDriver* driver, u_int8_t msgLen);
+char* readMsgFromBuff(DeviceDriver* driver, uint8_t msgLen);
 
 /* 
  * Helper: convert int to byte array 
