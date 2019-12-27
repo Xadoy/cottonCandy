@@ -73,7 +73,29 @@ char EbyteDeviceDriver::recv(){
 }
 
 int EbyteDeviceDriver::getLastMessageRssi(){
-    return 0;
+
+    // retrieve rssi from register
+    module->write(0xC0);
+    module->write(0xC1);
+    module->write(0xC2);
+    module->write(0xC3);
+
+    module->write(0x01);
+    module->write(0x01);
+
+    int bytesRead = 0;
+    int result = 0;
+    while (bytesRead < 4)
+    {
+      if (module->available())
+      {
+        char b = module->read();
+        if (bytesRead == 2)
+            result = (int)b;
+        bytesRead++;
+      }
+    }
+    return result;
 }
 
 void EbyteDeviceDriver::enterConfigMode()
