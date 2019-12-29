@@ -2,7 +2,7 @@
 
 #define DEBUG 1
 
-EbyteDeviceDriver::EbyteDeviceDriver(uint8_t rx, uint8_t tx, uint8_t m0, uint8_t m1, uint8_t aux_pin, address addr, 
+EbyteDeviceDriver::EbyteDeviceDriver(uint8_t rx, uint8_t tx, uint8_t m0, uint8_t m1, uint8_t aux_pin, byte* addr, 
                                     uint8_t channel) : DeviceDriver(){
     this->rx = rx;
     this->tx = tx;
@@ -54,17 +54,24 @@ bool EbyteDeviceDriver::init(){
  * enables hardware address filtering in the Ebyte transceiver. Also broadcast can easily be done by
  * setting dest address to FFFF;
  */ 
-int EbyteDeviceDriver::send(address destAddr, char* msg, long msgLen){
-    char data[3 + msgLen];
-    data[0] = (destAddr >> 8) & 0xFF;
-    data[1] = destAddr & 0xFF;
-    data[2] = (char)myChannel;
-    strncpy(data + 3, msg, msgLen);
+int EbyteDeviceDriver::send(byte* destAddr, byte* msg, long msgLen){
+    byte data[3 + msgLen];
+    memcpy(data, destAddr, 2);
+    data[2] = (byte)myChannel;
+    
+    memcpy(data + 3, msg, msgLen);
+    Serial.print("Messsage to be sent 0x");
+
+    for(int i = 0; i < msgLen + 3; i++){
+        Serial.print(data[i], HEX);
+        Serial.print(" ");
+    }
+    Serial.print("\n");
     return (module->write(data, sizeof(data)));
 }
 
 
-char EbyteDeviceDriver::recv(){
+byte EbyteDeviceDriver::recv(){
    if(module->available()){
        return (module->read());
    }
@@ -164,21 +171,21 @@ uint8_t EbyteDeviceDriver::getCurrentMode()
 }
 
 /*-----------LoRa Configuration-----------*/
-void EbyteDeviceDriver::setAddress(address addr)
+void EbyteDeviceDriver::setAddress(byte* addr)
 {
     module->write(0xC0);
-    module->write((char)0x00);
+    module->write((byte)0x00);
     module->write(0x02);
-    module->write((addr >> 8) & 0xFF);
-    module->write(addr & 0xFF);
+    module->write(addr, 2);
 
     //Block and read the reply to clear the buffer
     receiveConfigReply(5);
     
     if(DEBUG){
-        Serial.print("Successfully set Address to ");
-        Serial.print(addr);
-        Serial.print("\n");
+        Serial.print("Successfully set Address to 0x");
+        Serial.print(addr[0], HEX);
+        Serial.print(addr[1], HEX);
+        Serial.print("\n");   
     }
 }
 

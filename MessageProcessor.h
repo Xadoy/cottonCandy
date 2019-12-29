@@ -28,24 +28,26 @@ class GenericMessage
 
 public:
     unsigned char type;
-    address srcAddr;
+    byte* srcAddr;
     
     /**
      * For every message receveid, there will be an RSSI value associated
      */
     uint8_t rssi;
 
-    GenericMessage(unsigned char type, address srcAddr);
+    GenericMessage(unsigned char type, byte* srcAddr);
     // return number of bytes sent
-    virtual int send(DeviceDriver* driver, address destAddr);
-    void copyTypeAndAddr(char* msg);
+    virtual int send(DeviceDriver* driver, byte* destAddr);
+    void copyTypeAndAddr(byte* msg);
+
+    ~GenericMessage();
 };
 
 /*--------------------Join Beacon-------------------*/
 class Join: public GenericMessage
 {
 public:
-    Join(address srcAddr);
+    Join(byte* srcAddr);
 };
 
 /*--------------------JoinACK Message-------------------*/
@@ -53,8 +55,8 @@ class JoinAck: public GenericMessage
 {
 public:
     int hopsToGateway;
-    JoinAck(address srcAddr, int hopsToGateway);
-    int send(DeviceDriver* driver, address destAddr);
+    JoinAck(byte* srcAddr, int hopsToGateway);
+    int send(DeviceDriver* driver, byte* destAddr);
 };
 
 /*--------------------JoinCFM Message-------------------*/
@@ -63,8 +65,8 @@ class JoinCFM: public GenericMessage
 public:
     unsigned char depth;
 
-    JoinCFM(address srcAddr, unsigned char depth);
-    int send(DeviceDriver* driver, address destAddr);
+    JoinCFM(byte* srcAddr, unsigned char depth);
+    int send(DeviceDriver* driver, byte* destAddr);
 };
 
 /*--------------------CheckAlive Message-------------------*/
@@ -73,15 +75,15 @@ class CheckAlive: public GenericMessage
 public:
     unsigned char depth;
 
-    CheckAlive(address srcAddr, unsigned char depth);
-    int send(DeviceDriver* driver, address destAddr);
+    CheckAlive(byte* srcAddr, unsigned char depth);
+    int send(DeviceDriver* driver, byte* destAddr);
 };
 
 /*--------------------ReplyAlive Message-------------------*/
 class ReplyAlive: public GenericMessage
 {
 public:
-    ReplyAlive(address srcAddr);
+    ReplyAlive(byte* srcAddr);
 };
 
 
@@ -91,8 +93,8 @@ class GatewayRequest: public GenericMessage
 public:
     unsigned char seqNum;
 
-    GatewayRequest(address srcAddr, unsigned char seqNum);
-    int send(DeviceDriver* driver, address destAddr);
+    GatewayRequest(byte* srcAddr, unsigned char seqNum);
+    int send(DeviceDriver* driver, byte* destAddr);
 };
 
 /*--------------------NodeReply Message-------------------*/
@@ -102,11 +104,11 @@ public:
     unsigned char numOfNodes;
     unsigned char seqNum;
     unsigned char dataLength;
-    char* data; // maximum length 128 bytes
+    byte* data; // maximum length 128 bytes
 
-    NodeReply(address srcAddr, unsigned char numOfNodes, unsigned char seqNum, 
-                unsigned char dataLength, char* data);
-    int send(DeviceDriver* driver, address destAddr);
+    NodeReply(byte* srcAddr, unsigned char numOfNodes, unsigned char seqNum, 
+                unsigned char dataLength, byte* data);
+    int send(DeviceDriver* driver, byte* destAddr);
 };
 
 /*
@@ -120,18 +122,18 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout);
  * Read certain bytes from device buffer
  * !! Caller needs to free the memory after using the returned pointer
  */
-char* readMsgFromBuff(DeviceDriver* driver, uint8_t msgLen);
+byte* readMsgFromBuff(DeviceDriver* driver, uint8_t msgLen);
 
 /* 
  * Helper: convert int to byte array 
  * Assume Little Endian
  */
-void intToBytes(char* bytes, int intVal);
+void intToBytes(byte* bytes, int intVal);
 
 /* 
  * Helper: convert byte array to int
  * Assume Little Endian
  */
-int bytesToInt(char* bytes);
+int bytesToInt(byte* bytes);
 
 #endif

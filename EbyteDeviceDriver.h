@@ -17,15 +17,15 @@ typedef enum Mode
 
 class EbyteDeviceDriver : public DeviceDriver{
 public:
-    EbyteDeviceDriver(uint8_t rx, uint8_t tx, uint8_t m0, uint8_t m1, uint8_t aux_pin, address addr, uint8_t channel);
+    EbyteDeviceDriver(uint8_t rx, uint8_t tx, uint8_t m0, uint8_t m1, uint8_t aux_pin, byte* addr, uint8_t channel);
 
     ~EbyteDeviceDriver();
 
     bool init();
 
-    int send(address destAddr, char* msg, long msgLen);
+    int send(byte* destAddr, byte* msg, long msgLen);
 
-    char recv();
+    byte recv();
 
     int getLastMessageRssi();
 
@@ -38,11 +38,11 @@ private:
     uint8_t aux_pin;
     uint8_t currentMode = 0;
 
-    address myAddr;
+    byte* myAddr;
     uint8_t myChannel;
 
     /*-----------Module Registers Configuration-----------*/
-    void setAddress(address addr);
+    void setAddress(byte* addr);
     void setChannel(uint8_t channe);
     void setNetId(uint8_t netId);
     void setOthers(byte config);

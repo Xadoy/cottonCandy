@@ -13,7 +13,7 @@
 #define JOINED 4
 
 /* Setting the first bit of the address to 0 indicates a gateways */
-#define GATEWAY_ADDRESS_MASK 0x8000
+#define GATEWAY_ADDRESS_MASK 0x80
 
 /* The default time for discovery is 10 seconds */
 #define DISCOVERY_TIMEOUT 10000
@@ -37,12 +37,12 @@ struct ParentInfo{
     unsigned long lastAliveTime;
     int hopsToGateway;
     
-    address parentAddr;
+    byte parentAddr[2];
     uint8_t Rssi;  
 };
 
 struct ChildNode{
-    address nodeAddr;
+    byte* nodeAddr;
 
     ChildNode* next;
 };
@@ -50,11 +50,6 @@ struct ChildNode{
 class ForwardEngine{
 
 public:
-    /**
-     * Default Constructor
-     */
-    ForwardEngine();
-
     /**
      * Copy constructor
      */
@@ -69,7 +64,7 @@ public:
      * Constructor. Requires driver and assigned addr
      * TODO: Add the function pointer for callback
      */
-    ForwardEngine(address addr, DeviceDriver* driver);
+    ForwardEngine(byte* addr, DeviceDriver* driver);
 
     /**
      * Try to join an existing network by finding a parent. Return true if successfully joined an 
@@ -93,23 +88,23 @@ public:
 
 
     //Setter for the node address
-    void setAddr(address addr);
+    void setAddr(byte* addr);
 
     /**
      * Getter for the node address
      */
-    address getMyAddr();
+    byte* getMyAddr();
 
     /**
      * Getter for the parent address
      */
-    address getParentAddr();
+    byte* getParentAddr();
 
 private:
     /**
      * Node address
      */
-    address myAddr;
+    byte* myAddr;
 
     /**
      * DeviceDriver driver;
