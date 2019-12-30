@@ -12,7 +12,7 @@
 #define CREATE 3
 #define JOINED 4
 
-/* Setting the first bit of the address to 0 indicates a gateways */
+/* Setting the first bit of the address to 1 indicates a gateways */
 #define GATEWAY_ADDRESS_MASK 0x80
 
 /* The default time for discovery is 10 seconds */
