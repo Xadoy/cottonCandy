@@ -47,7 +47,7 @@ Join::Join(byte* srcAddr) : GenericMessage(MESSAGE_JOIN, srcAddr)
 
 
 /*--------------------JoinACK Message-------------------*/
-JoinAck::JoinAck(byte* srcAddr, int hopsToGateway) : GenericMessage(MESSAGE_JOIN_ACK, srcAddr)
+JoinAck::JoinAck(byte* srcAddr, byte hopsToGateway) : GenericMessage(MESSAGE_JOIN_ACK, srcAddr)
 {
     this->hopsToGateway = hopsToGateway;
 }
@@ -61,9 +61,7 @@ JoinAck::send(DeviceDriver* driver, byte* destAddr)
 
     char msg[MSG_LEN_JOIN_ACK];
     copyTypeAndAddr(msg);
-    // convert int to byte array
-    // when JoinAck is sent, it guarantees the hopsToGateway is positive
-    intToBytes(msg+3, this->hopsToGateway);
+    msg[3] = this->hopsToGateway;
 
     return ( driver->send(destAddr, msg, sizeof(msg)) );
 }
@@ -203,7 +201,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
             byte srcAddr[2];
             memcpy(srcAddr, buff, 2);
 
-            int hopsToGateway = bytesToInt(buff+2);
+            byte hopsToGateway = buff[3];
 
             msg = new JoinAck(srcAddr, hopsToGateway);
             delete[] buff;
@@ -329,6 +327,7 @@ byte* readMsgFromBuff(DeviceDriver* driver, uint8_t msgLen)
     return buff;
 }
 
+/* may be deleted later
 void intToBytes(byte* bytes, int intVal)
 {
     bytes[3] = (intVal >> 24) & 0xFF;
@@ -342,5 +341,5 @@ int bytesToInt(byte* bytes)
     int ret;
     memcpy(&ret, bytes, 4);
     return ret;
-}
+}*/
 

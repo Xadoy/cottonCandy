@@ -12,7 +12,7 @@ ForwardEngine::ForwardEngine(byte* addr, DeviceDriver *driver)
 
     //Initialize the parent to NULL
     memcpy(myParent.parentAddr, myAddr, 2);
-    myParent.hopsToGateway = -1;
+    myParent.hopsToGateway = 255;
 
     numChildren = 0;
     childrenList = nullptr;
@@ -117,12 +117,12 @@ bool ForwardEngine::join()
                 //Serial.println(msg->rssi, HEX);
 
                 //If it receives an ACK sent by a potential parent, compare with the current parent candidate
-                int newHopsToGateway = ((JoinAck *)msg)->hopsToGateway;
+                byte newHopsToGateway = ((JoinAck *)msg)->hopsToGateway;
 
-                if (newHopsToGateway != -1)
+                if (newHopsToGateway != 255)
                 {
                     //The remote node has a connection to the gateway
-                    if (bestParentCandidate.hopsToGateway != -1)
+                    if (bestParentCandidate.hopsToGateway != 255)
                     {
                         //Case 1: Both the current parent candidate and new node are connected to the gateway
                         //Choose the candidate with the minimum hops to the gateway while the RSSI is over the threshold
@@ -217,7 +217,7 @@ bool ForwardEngine::run()
         state = INIT;
 
         //Uninitilized gateway cost
-        hopsToGateway = -1;
+        hopsToGateway = 255;
 
         //If it is a regular node, it needs to join the network to operate
         while (state == INIT)

@@ -12,7 +12,7 @@
 
 #define MSG_LEN_GENERIC           3
 #define MSG_LEN_JOIN              3
-#define MSG_LEN_JOIN_ACK          7
+#define MSG_LEN_JOIN_ACK          4
 #define MSG_LEN_JOIN_CFM          4
 #define MSG_LEN_CHECK_ALIVE       4
 #define MSG_LEN_REPLY_ALIVE       3
@@ -54,8 +54,8 @@ public:
 class JoinAck: public GenericMessage
 {
 public:
-    int hopsToGateway;
-    JoinAck(byte* srcAddr, int hopsToGateway);
+    byte hopsToGateway;
+    JoinAck(byte* srcAddr, byte hopsToGateway);
     int send(DeviceDriver* driver, byte* destAddr);
 };
 

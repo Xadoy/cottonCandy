@@ -35,7 +35,7 @@
 
 struct ParentInfo{
     unsigned long lastAliveTime;
-    int hopsToGateway;
+    byte hopsToGateway;
     
     byte parentAddr[2];
     uint8_t Rssi;  
@@ -119,7 +119,7 @@ private:
     /**
      * Hops to the gateway
      */ 
-    int hopsToGateway; 
+    byte hopsToGateway; 
 
     /**
      * Current State
