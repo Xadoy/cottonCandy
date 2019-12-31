@@ -105,7 +105,8 @@ bool ForwardEngine::join()
         }
 
         byte* nodeAddr = msg->srcAddr;
-
+        Serial.print("Received msg type = ");
+        Serial.print(msg->type);
         switch (msg->type)
         {
             case MESSAGE_JOIN_ACK:
@@ -175,9 +176,11 @@ bool ForwardEngine::join()
 
     Serial.println("Discovery timeout");
 
-    if (bestParentCandidate.parentAddr != myAddr)
+    if (bestParentCandidate.parentAddr[0] != myAddr[0] && bestParentCandidate.parentAddr[1] != myAddr[1] )
     {
-
+        Serial.print("bestParentCandidate.parentAddr = 0x");
+        Serial.print(bestParentCandidate.parentAddr[0], HEX);
+        Serial.println(bestParentCandidate.parentAddr[1], HEX);
         myParent = bestParentCandidate;
         hopsToGateway = bestParentCandidate.hopsToGateway + 1;
 
@@ -225,7 +228,7 @@ bool ForwardEngine::run()
             }
             else
             {
-                Serial.println("Joining unsuccessful. Retry joining in 5 seconds");
+                Serial.println(F("Joining unsuccessful. Retry joining in 5 seconds"));
                 sleepForMillis(5000);
             }
         }
