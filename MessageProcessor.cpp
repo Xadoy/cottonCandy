@@ -201,7 +201,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
             byte srcAddr[2];
             memcpy(srcAddr, buff, 2);
 
-            byte hopsToGateway = buff[3];
+            byte hopsToGateway = buff[2];
 
             msg = new JoinAck(srcAddr, hopsToGateway);
             delete[] buff;

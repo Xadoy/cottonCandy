@@ -182,7 +182,7 @@ bool ForwardEngine::join()
         Serial.print(bestParentCandidate.parentAddr[0], HEX);
         Serial.println(bestParentCandidate.parentAddr[1], HEX);
         myParent = bestParentCandidate;
-        hopsToGateway = bestParentCandidate.hopsToGateway + 1;
+        hopsToGateway = bestParentCandidate.hopsToGateway + 0b1;
 
         Serial.print(F(" HopsToGateway = "));
         Serial.println(hopsToGateway);
