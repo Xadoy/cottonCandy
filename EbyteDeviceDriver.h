@@ -7,13 +7,13 @@
 
 #define BAUD_RATE 9600
 
-typedef enum Mode
+typedef enum 
 {
   TRANSMIT,
   CONFIG,
   WOR,
   SLEEP
-};
+} Mode;
 
 class EbyteDeviceDriver : public DeviceDriver{
 public:

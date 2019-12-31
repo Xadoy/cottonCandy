@@ -110,7 +110,7 @@ bool ForwardEngine::join()
         switch (msg->type)
         {
             case MESSAGE_JOIN_ACK:
-
+            {
                 //Serial.print("MESSAGE_JOIN_ACK: src=0x");
                 //Serial.print(nodeAddr, HEX);
                 //Serial.print(" rssi=");
@@ -162,7 +162,7 @@ bool ForwardEngine::join()
                 //Other cases involve: new node -> not connected to gateway, current best parent -> connected to the gateway
                 //In this case we will not update the best parent candidate
                 break;
-
+            }
             default:
                 //Serial.print("MESSAGE: type=");
                 //Serial.print(msg->type, HEX);
@@ -255,6 +255,7 @@ bool ForwardEngine::run()
             switch (msg->type)
             {
             case MESSAGE_JOIN:
+            {
                 //TODO: May need a limit for number of children
 
                 JoinAck ack(myAddr, hopsToGateway);
@@ -265,8 +266,9 @@ bool ForwardEngine::run()
                 Serial.println(nodeAddr[1], HEX);
 
                 break;
-
+            }
             case MESSAGE_JOIN_CFM:
+            {
                 //Add the new child to the linked list (Insert in the beginning of the linked list)
 
                 ChildNode *node = new ChildNode();
@@ -280,8 +282,9 @@ bool ForwardEngine::run()
                 Serial.print(nodeAddr[0], HEX);
                 Serial.println(nodeAddr[1], HEX);
                 break;
-
+            }
             case MESSAGE_REPLY_ALIVE:
+            {
                 //We do not need to check the message src address here since the parent should
                 //only unicast the reply message (Driver does the filtering).
 
@@ -295,12 +298,14 @@ bool ForwardEngine::run()
                     myParent.lastAliveTime = getTimeMillis();
                 }
                 break;
-
+            }
             case MESSAGE_CHECK_ALIVE:
+            {
                 //Parent replies back to the child node
                 ReplyAlive reply(myAddr);
                 reply.send(myDriver, nodeAddr);
                 break;
+            }
             }
         }
 

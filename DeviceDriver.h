@@ -5,7 +5,7 @@
 
 #include "Arduino.h"
 
-const char BROADCAST_ADDR[2] = {0xFF, 0xFF};
+static byte BROADCAST_ADDR[2] = {0xFF, 0xFF};
 
 //typedef unsigned short address;
 
