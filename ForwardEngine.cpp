@@ -176,7 +176,7 @@ bool ForwardEngine::join()
 
     Serial.println("Discovery timeout");
 
-    if (bestParentCandidate.parentAddr[0] != myAddr[0] && bestParentCandidate.parentAddr[1] != myAddr[1] )
+    if (bestParentCandidate.parentAddr[0] != myAddr[0] || bestParentCandidate.parentAddr[1] != myAddr[1] )
     {
         Serial.print("bestParentCandidate.parentAddr = 0x");
         Serial.print(bestParentCandidate.parentAddr[0], HEX);

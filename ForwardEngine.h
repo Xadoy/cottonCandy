@@ -136,7 +136,7 @@ private:
      */
     ChildNode* childrenList;
 
-    unsigned long checkAliveInterval;
+    unsigned long checkAliveInterval = 10000;
 
 };
 
