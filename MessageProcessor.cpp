@@ -52,14 +52,14 @@ JoinAck::JoinAck(byte* srcAddr, byte hopsToGateway) : GenericMessage(MESSAGE_JOI
     this->hopsToGateway = hopsToGateway;
 }
 
-JoinAck::send(DeviceDriver* driver, byte* destAddr)
+int JoinAck::send(DeviceDriver* driver, byte* destAddr)
 {
     if(driver == NULL)
     {
         return -1;
     }
 
-    char msg[MSG_LEN_JOIN_ACK];
+    byte msg[MSG_LEN_JOIN_ACK];
     copyTypeAndAddr(msg);
     msg[3] = this->hopsToGateway;
 
@@ -79,7 +79,7 @@ int JoinCFM::send(DeviceDriver* driver, byte* destAddr)
         return -1;
     }
 
-    char msg[MSG_LEN_JOIN_CFM];
+    byte msg[MSG_LEN_JOIN_CFM];
     copyTypeAndAddr(msg);
     msg[3] = this->depth;
 
@@ -99,7 +99,7 @@ int CheckAlive::send(DeviceDriver* driver, byte* destAddr)
         return -1;
     }
 
-    char msg[MSG_LEN_CHECK_ALIVE];
+    byte msg[MSG_LEN_CHECK_ALIVE];
     copyTypeAndAddr(msg);
     msg[3] = this->depth;
 
@@ -125,7 +125,7 @@ int GatewayRequest::send(DeviceDriver* driver, byte* destAddr)
         return -1;
     }
 
-    char msg[MSG_LEN_GATEWAY_REQ];
+    byte msg[MSG_LEN_GATEWAY_REQ];
     copyTypeAndAddr(msg);
     msg[3] = this->seqNum;
 
@@ -151,7 +151,7 @@ int NodeReply::send(DeviceDriver* driver, byte* destAddr)
         return -1;
     }
 
-    char msg[this->dataLength + 6];
+    byte msg[this->dataLength + 6];
     copyTypeAndAddr(msg);
 
     msg[3] = this->numOfNodes;
