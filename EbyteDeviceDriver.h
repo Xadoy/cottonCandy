@@ -27,6 +27,8 @@ public:
 
     byte recv();
 
+    int available();
+
     int getLastMessageRssi();
 
 private:

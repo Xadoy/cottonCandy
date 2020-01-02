@@ -79,7 +79,9 @@ byte EbyteDeviceDriver::recv(){
        return -1;
    }
 }
-
+int EbyteDeviceDriver::available(){
+    return module->available();
+}
 int EbyteDeviceDriver::getLastMessageRssi(){
 
     // retrieve rssi from register

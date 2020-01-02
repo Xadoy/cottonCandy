@@ -36,6 +36,11 @@ public:
 
     virtual int getLastMessageRssi() = 0;
 
+    /**
+     * Returns number of bytes that are available.
+     */
+    virtual int available() = 0;
+
 private:
     /**
      * Default receive timeout is 5000 ms (5 seconds) 
