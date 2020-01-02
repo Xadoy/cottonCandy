@@ -27,7 +27,7 @@ class GenericMessage
 {
 
 public:
-    unsigned char type;
+    byte type;
     byte* srcAddr;
     
     /**
@@ -35,7 +35,7 @@ public:
      */
     uint8_t rssi;
 
-    GenericMessage(unsigned char type, byte* srcAddr);
+    GenericMessage(byte type, byte* srcAddr);
     // return number of bytes sent
     virtual int send(DeviceDriver* driver, byte* destAddr);
     void copyTypeAndAddr(byte* msg);
@@ -63,9 +63,9 @@ public:
 class JoinCFM: public GenericMessage
 {
 public:
-    unsigned char depth;
+    byte depth;
 
-    JoinCFM(byte* srcAddr, unsigned char depth);
+    JoinCFM(byte* srcAddr, byte depth);
     int send(DeviceDriver* driver, byte* destAddr);
 };
 
@@ -73,9 +73,9 @@ public:
 class CheckAlive: public GenericMessage
 {
 public:
-    unsigned char depth;
+    byte depth;
 
-    CheckAlive(byte* srcAddr, unsigned char depth);
+    CheckAlive(byte* srcAddr, byte depth);
     int send(DeviceDriver* driver, byte* destAddr);
 };
 
@@ -91,9 +91,9 @@ public:
 class GatewayRequest: public GenericMessage
 {
 public:
-    unsigned char seqNum;
+    byte seqNum;
 
-    GatewayRequest(byte* srcAddr, unsigned char seqNum);
+    GatewayRequest(byte* srcAddr, byte seqNum);
     int send(DeviceDriver* driver, byte* destAddr);
 };
 
@@ -101,13 +101,13 @@ public:
 class NodeReply: public GenericMessage
 {
 public:
-    unsigned char numOfNodes;
-    unsigned char seqNum;
-    unsigned char dataLength;
+    byte numOfNodes;
+    byte seqNum;
+    byte dataLength;
     byte* data; // maximum length 128 bytes
 
-    NodeReply(byte* srcAddr, unsigned char numOfNodes, unsigned char seqNum, 
-                unsigned char dataLength, byte* data);
+    NodeReply(byte* srcAddr, byte numOfNodes, byte seqNum, 
+                byte dataLength, byte* data);
     int send(DeviceDriver* driver, byte* destAddr);
 };
 

@@ -3,7 +3,7 @@
 #include "Utilities.h"
 
 
-GenericMessage::GenericMessage(unsigned char type, byte* srcAddr)
+GenericMessage::GenericMessage(byte type, byte* srcAddr)
 {
     this->type = type;
     this->srcAddr = new byte[2];    
@@ -11,16 +11,11 @@ GenericMessage::GenericMessage(unsigned char type, byte* srcAddr)
     memcpy(this->srcAddr, srcAddr, 2);
 }
 
-//Note:Little Endian reverse the order of bytes
-
 void GenericMessage::copyTypeAndAddr(byte* msg)
 {
     msg[0] = this->type;
-    //reverse the bytes
     msg[1] = this->srcAddr[0];
     msg[2] = this->srcAddr[1];
-    //msg[1] = ((unsigned char *)&(this->srcAddr))[1];
-    //msg[2] = ((unsigned char *)&(this->srcAddr))[0];
 }
 
 int GenericMessage::send(DeviceDriver* driver, byte* destAddr)
@@ -67,7 +62,7 @@ int JoinAck::send(DeviceDriver* driver, byte* destAddr)
 }
 
 /*--------------------JoinCFM Message-------------------*/
-JoinCFM::JoinCFM(byte* srcAddr, unsigned char depth) : GenericMessage(MESSAGE_JOIN_CFM, srcAddr)
+JoinCFM::JoinCFM(byte* srcAddr, byte depth) : GenericMessage(MESSAGE_JOIN_CFM, srcAddr)
 {
     this->depth = depth;
 }
@@ -87,7 +82,7 @@ int JoinCFM::send(DeviceDriver* driver, byte* destAddr)
 }
 
 /*--------------------CheckAlive Message-------------------*/
-CheckAlive::CheckAlive(byte* srcAddr, unsigned char depth) : GenericMessage(MESSAGE_CHECK_ALIVE, srcAddr)
+CheckAlive::CheckAlive(byte* srcAddr, byte depth) : GenericMessage(MESSAGE_CHECK_ALIVE, srcAddr)
 {
     this->depth = depth;
 }
@@ -113,7 +108,7 @@ ReplyAlive::ReplyAlive(byte* srcAddr) : GenericMessage(MESSAGE_REPLY_ALIVE, srcA
 }
 
 /*--------------------GatewayRequest Message-------------------*/
-GatewayRequest::GatewayRequest(byte* srcAddr, unsigned char seqNum): GenericMessage(MESSAGE_GATEWAY_REQ, srcAddr)
+GatewayRequest::GatewayRequest(byte* srcAddr, byte seqNum): GenericMessage(MESSAGE_GATEWAY_REQ, srcAddr)
 {
     this->seqNum = seqNum;
 }
@@ -133,11 +128,9 @@ int GatewayRequest::send(DeviceDriver* driver, byte* destAddr)
 }
 
 /*--------------------NodeReply Message-------------------*/
-NodeReply::NodeReply(byte* srcAddr, unsigned char numOfNodes, unsigned char seqNum, 
-                unsigned char dataLength, byte* data) : GenericMessage(MESSAGE_NODE_REPLY, srcAddr)
+NodeReply::NodeReply(byte* srcAddr, byte numOfNodes, byte seqNum, 
+                byte dataLength, byte* data) : GenericMessage(MESSAGE_NODE_REPLY, srcAddr)
 {
-    this->type = type;
-    this->srcAddr = srcAddr;
     this->numOfNodes = numOfNodes;
     this->seqNum = seqNum;
     this->dataLength = dataLength;
@@ -217,7 +210,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
             byte srcAddr[2];
             memcpy(srcAddr, buff, 2);
 
-            unsigned char depth = buff[2];
+            byte depth = buff[2];
 
             msg = new JoinCFM(srcAddr, depth);
             delete[] buff;
@@ -233,7 +226,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
             byte srcAddr[2];
             memcpy(srcAddr, buff, 2);
 
-            unsigned char depth = buff[2];
+            byte depth = buff[2];
 
             msg = new CheckAlive(srcAddr, depth);
             delete[] buff;
@@ -263,7 +256,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
             byte srcAddr[2];
             memcpy(srcAddr, buff, 2);
 
-            unsigned char depth = buff[2];
+            byte depth = buff[2];
 
             msg = new GatewayRequest(srcAddr, depth);
             delete[] buff;
@@ -274,13 +267,14 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
         {
             // we have already read the msg type
             // need to know the data length before getting the data
+            // TODO: check available before reading from device (else will receive 0xFF if nothing in buffer)
             byte srcAddr[2];
             srcAddr[0] = driver->recv();
             srcAddr[1] = driver->recv();
 
-            unsigned char numOfNodes = driver->recv();
-            unsigned char seqNum = driver->recv();
-            unsigned char dataLength = driver->recv();
+            byte numOfNodes = driver->recv();
+            byte seqNum = driver->recv();
+            byte dataLength = driver->recv();
 
             byte* data = readMsgFromBuff(driver, dataLength);
 
