@@ -306,16 +306,19 @@ byte* readMsgFromBuff(DeviceDriver* driver, uint8_t msgLen)
     */
     int i = 0;
     
-    while(i < msgLen){
-        byte c = driver->recv();
-        if(c == 0xFF){
-            continue;
-        }
-
-        buff[i] = c;
-        Serial.print(buff[i], HEX);
-        Serial.print(" ");
-        i++;
+    while(i < msgLen)
+    {
+        if(driver->available())
+        {
+            byte c = driver->recv();
+            buff[i] = c;
+            Serial.print(buff[i], HEX);
+            Serial.print(" ");
+            i++;
+        }   
+        // if(c == 0xFF){
+        //     continue;
+        // }        
     }
     Serial.print("\n");
     return buff;
