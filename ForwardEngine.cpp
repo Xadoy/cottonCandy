@@ -69,10 +69,10 @@ bool ForwardEngine::join()
     //Serial.print("myAddr = 0x");
     //Serial.print(myAddr[0], HEX);
     //Serial.println(myAddr[1], HEX);
-    Join beacon(myAddr);
+    Join beacon(myAddr, BROADCAST_ADDR);
 
     //Send out the beacon once to discover nearby nodes
-    beacon.send(myDriver, BROADCAST_ADDR);
+    beacon.send(myDriver);
 
     //Give some time for the transimission and replying
     sleepForMillis(500);
@@ -189,9 +189,9 @@ bool ForwardEngine::join()
 
         Serial.println(F("Send JoinCFM to parent"));
         //Send a confirmation to the parent node
-        JoinCFM cfm(myAddr, numChildren);
+        JoinCFM cfm(myAddr, myParent.parentAddr, numChildren);
         
-        cfm.send(myDriver, myParent.parentAddr);
+        cfm.send(myDriver);
         return true;
     }
     else
@@ -258,8 +258,8 @@ bool ForwardEngine::run()
             {
                 //TODO: May need a limit for number of children
 
-                JoinAck ack(myAddr, hopsToGateway);
-                ack.send(myDriver, nodeAddr);
+                JoinAck ack(myAddr, nodeAddr, hopsToGateway);
+                ack.send(myDriver);
 
                 Serial.print("MESSAGE_JOIN: src=0x");
                 Serial.print(nodeAddr[0], HEX);
@@ -302,8 +302,8 @@ bool ForwardEngine::run()
             case MESSAGE_CHECK_ALIVE:
             {
                 //Parent replies back to the child node
-                ReplyAlive reply(myAddr);
-                reply.send(myDriver, nodeAddr);
+                ReplyAlive reply(myAddr, nodeAddr);
+                reply.send(myDriver);
                 break;
             }
             }
@@ -327,8 +327,8 @@ bool ForwardEngine::run()
                 //We should now check if the parent is alive
 
                 //Send out the checkAlive message to the parent
-                CheckAlive checkMsg(myAddr, 0);
-                checkMsg.send(myDriver, myParent.parentAddr);
+                CheckAlive checkMsg(myAddr, myParent.parentAddr, 0);
+                checkMsg.send(myDriver);
 
                 checkingParent = true;
                 prevAliveCheckTime = getTimeMillis();
