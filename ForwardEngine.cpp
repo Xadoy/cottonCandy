@@ -347,10 +347,13 @@ bool ForwardEngine::run()
 
                 state = INIT;
 
-                return 1;
+                break;
             }
         }
     }
 
+    myParent.parentAddr = myAddr;
+    myParent.lastAliveTime = getTimeMillis();
+    
     return 1;
 }
