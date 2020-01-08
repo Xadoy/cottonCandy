@@ -5,9 +5,7 @@
 
 GenericMessage::GenericMessage(byte type, byte* srcAddr, byte* destAddr)
 {
-    this->type = type;
-    this->srcAddr = new byte[2];
-    this->destAddr = new byte[2];    
+    this->type = type;  
     
     memcpy(this->srcAddr, srcAddr, 2);
     memcpy(this->destAddr, destAddr, 2);
@@ -36,8 +34,6 @@ int GenericMessage::send(DeviceDriver* driver)
 }
 
 GenericMessage::~GenericMessage(){
-    free(srcAddr);
-    free(destAddr);
 }
 
 /*--------------------Join Beacon-------------------*/

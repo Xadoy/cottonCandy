@@ -29,8 +29,8 @@ class GenericMessage
 
 public:
     byte type;
-    byte* srcAddr;
-    byte* destAddr;
+    byte srcAddr[2];
+    byte destAddr[2];
     
     /**
      * For every message receveid, there will be an RSSI value associated
