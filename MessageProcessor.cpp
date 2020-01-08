@@ -20,7 +20,7 @@ void GenericMessage::copyTypeAndAddr(byte* msg)
     msg[4] = this->destAddr[1];
 }
 
-int GenericMessage::send(DeviceDriver* driver)
+int GenericMessage::send(DeviceDriver* driver, byte* destAddr)
 {
     if(driver == NULL)
     {
@@ -48,7 +48,7 @@ JoinAck::JoinAck(byte* srcAddr, byte* destAddr, byte hopsToGateway) : GenericMes
     this->hopsToGateway = hopsToGateway;
 }
 
-int JoinAck::send(DeviceDriver* driver)
+int JoinAck::send(DeviceDriver* driver, byte* destAddr)
 {
     if(driver == NULL)
     {
@@ -68,7 +68,7 @@ JoinCFM::JoinCFM(byte* srcAddr, byte* destAddr, byte depth) : GenericMessage(MES
     this->depth = depth;
 }
 
-int JoinCFM::send(DeviceDriver* driver)
+int JoinCFM::send(DeviceDriver* driver, byte* destAddr)
 {
     if(driver == NULL)
     {
@@ -88,7 +88,7 @@ CheckAlive::CheckAlive(byte* srcAddr, byte* destAddr, byte depth) : GenericMessa
     this->depth = depth;
 }
 
-int CheckAlive::send(DeviceDriver* driver)
+int CheckAlive::send(DeviceDriver* driver, byte* destAddr)
 {
     if(driver == NULL)
     {
@@ -115,7 +115,7 @@ GatewayRequest::GatewayRequest(byte* srcAddr, byte* destAddr, byte seqNum): Gene
     this->seqNum = seqNum;
 }
 
-int GatewayRequest::send(DeviceDriver* driver)
+int GatewayRequest::send(DeviceDriver* driver, byte* destAddr)
 {
     if(driver == NULL)
     {
@@ -139,7 +139,7 @@ NodeReply::NodeReply(byte* srcAddr, byte* destAddr, byte numOfNodes, byte seqNum
     memcpy(this->data, data, dataLength);
 }
 
-int NodeReply::send(DeviceDriver* driver)
+int NodeReply::send(DeviceDriver* driver, byte* destAddr)
 {
     if(driver == NULL)
     {

@@ -39,7 +39,7 @@ public:
 
     GenericMessage(byte type, byte* srcAddr, byte* destAddr);
     // return number of bytes sent
-    virtual int send(DeviceDriver* driver);
+    virtual int send(DeviceDriver* driver, byte* destAddr);
     void copyTypeAndAddr(byte* msg);
 
     ~GenericMessage();
@@ -58,7 +58,7 @@ class JoinAck: public GenericMessage
 public:
     byte hopsToGateway;
     JoinAck(byte* srcAddr, byte* destAddr, byte hopsToGateway);
-    int send(DeviceDriver* driver);
+    int send(DeviceDriver* driver, byte* destAddr);
 };
 
 /*--------------------JoinCFM Message-------------------*/
@@ -68,7 +68,7 @@ public:
     byte depth;
 
     JoinCFM(byte* srcAddr, byte* destAddr, byte depth);
-    int send(DeviceDriver* driver);
+    int send(DeviceDriver* driver, byte* destAddr);
 };
 
 /*--------------------CheckAlive Message-------------------*/
@@ -78,7 +78,7 @@ public:
     byte depth;
 
     CheckAlive(byte* srcAddr, byte* destAddr, byte depth);
-    int send(DeviceDriver* driver);
+    int send(DeviceDriver* driver, byte* destAddr);
 };
 
 /*--------------------ReplyAlive Message-------------------*/
@@ -96,7 +96,7 @@ public:
     byte seqNum;
 
     GatewayRequest(byte* srcAddr, byte* destAddr, byte seqNum);
-    int send(DeviceDriver* driver);
+    int send(DeviceDriver* driver, byte* destAddr);
 };
 
 /*--------------------NodeReply Message-------------------*/
@@ -110,7 +110,7 @@ public:
 
     NodeReply(byte* srcAddr, byte* destAddr, byte numOfNodes, byte seqNum, 
                 byte dataLength, byte* data);
-    int send(DeviceDriver* driver);
+    int send(DeviceDriver* driver, byte* destAddr);
 };
 
 /*
