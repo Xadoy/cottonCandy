@@ -182,6 +182,7 @@ bool ForwardEngine::join()
         Serial.print(bestParentCandidate.parentAddr[0], HEX);
         Serial.println(bestParentCandidate.parentAddr[1], HEX);
         myParent = bestParentCandidate;
+        myParent.lastAliveTime = getTimeMillis();
         hopsToGateway = bestParentCandidate.hopsToGateway + 0b1;
 
         Serial.print(F(" HopsToGateway = "));
@@ -271,7 +272,7 @@ bool ForwardEngine::run()
             {
                 //Add the new child to the linked list (Insert in the beginning of the linked list)
 
-                ChildNode *node = new ChildNode();
+                /*ChildNode *node = new ChildNode();
                 node->nodeAddr = msg->srcAddr;
                 node->next = childrenList;
 
@@ -280,14 +281,14 @@ bool ForwardEngine::run()
 
                 Serial.print("A new child has joined: 0x");
                 Serial.print(nodeAddr[0], HEX);
-                Serial.println(nodeAddr[1], HEX);
+                Serial.println(nodeAddr[1], HEX);*/
                 break;
             }
             case MESSAGE_REPLY_ALIVE:
             {
                 //We do not need to check the message src address here since the parent should
                 //only unicast the reply message (Driver does the filtering).
-
+                Serial.println("I got REPLYYYYYYYYYYY");
                 //If we have previously issued a checkAlive message
                 if (checkingParent)
                 {
@@ -302,12 +303,18 @@ bool ForwardEngine::run()
             case MESSAGE_CHECK_ALIVE:
             {
                 //Parent replies back to the child node
+                Serial.println("I got checked by my son");
                 ReplyAlive reply(myAddr, nodeAddr);
                 reply.send(myDriver);
                 break;
             }
             }
         }
+        else
+        {
+            Serial.println("TIME WASTED");
+        }
+        
 
         if (msg != nullptr)
         {
@@ -318,7 +325,7 @@ bool ForwardEngine::run()
         if (myAddr[0] & GATEWAY_ADDRESS_MASK){
             continue;
         }
-
+/*
         //If we are not current waiting for MESSAGE_REPLY_ALIVE from the parent
         if (!checkingParent)
         {
@@ -347,13 +354,19 @@ bool ForwardEngine::run()
 
                 state = INIT;
 
+                Serial.println("I am batman ~~~~~~");
+                Serial.print("prevAliveCheckTime is ");
+                Serial.println(prevAliveCheckTime);
+                Serial.print("right now is ");
+                Serial.println(getTimeMillis());
                 break;
             }
-        }
+        }*/
     }
 
-    myParent.parentAddr = myAddr;
+    myParent.parentAddr[0] = myAddr[0];
+    myParent.parentAddr[1] = myAddr[1];
     myParent.lastAliveTime = getTimeMillis();
-    
+
     return 1;
 }
