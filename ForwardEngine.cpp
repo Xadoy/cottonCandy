@@ -1,16 +1,14 @@
 #include "ForwardEngine.h"
 #include <string.h>
 
-ForwardEngine::ForwardEngine(byte* addr, DeviceDriver *driver)
+ForwardEngine::ForwardEngine(byte *addr, DeviceDriver *driver)
 {
-    myAddr = new byte[2];
-    
     myAddr[0] = addr[0];
     myAddr[1] = addr[1];
 
     myDriver = driver;
 
-    //Initialize the parent to NULL
+    //A node is its own parent initially
     memcpy(myParent.parentAddr, myAddr, 2);
     myParent.hopsToGateway = 255;
 
@@ -30,17 +28,17 @@ ForwardEngine::~ForwardEngine()
     }
 }
 
-void ForwardEngine::setAddr(byte* addr)
+void ForwardEngine::setAddr(byte *addr)
 {
     memcpy(myAddr, addr, 2);
 }
 
-byte* ForwardEngine::getMyAddr()
+byte *ForwardEngine::getMyAddr()
 {
     return this->myAddr;
 }
 
-byte* ForwardEngine::getParentAddr()
+byte *ForwardEngine::getParentAddr()
 {
     return this->myParent.parentAddr;
 }
@@ -69,13 +67,13 @@ bool ForwardEngine::join()
     //Serial.print("myAddr = 0x");
     //Serial.print(myAddr[0], HEX);
     //Serial.println(myAddr[1], HEX);
-    Join beacon(myAddr);
+    Join beacon(myAddr, BROADCAST_ADDR);
 
     //Send out the beacon once to discover nearby nodes
     beacon.send(myDriver, BROADCAST_ADDR);
 
     //Give some time for the transimission and replying
-    sleepForMillis(500);
+    //sleepForMillis(500);
 
     //Serial.print("Wait for reply: timeout = ");
     //Serial.println(DISCOVERY_TIMEOUT);
@@ -104,50 +102,52 @@ bool ForwardEngine::join()
             continue;
         }
 
-        byte* nodeAddr = msg->srcAddr;
+        byte *nodeAddr = msg->srcAddr;
         Serial.print("Received msg type = ");
-        Serial.print(msg->type);
+        Serial.println(msg->type);
         switch (msg->type)
         {
-            case MESSAGE_JOIN_ACK:
+        case MESSAGE_JOIN_ACK:
+        {
+            //Serial.print("MESSAGE_JOIN_ACK: src=0x");
+            //Serial.print(nodeAddr, HEX);
+            //Serial.print(" rssi=");
+            //Serial.println(msg->rssi, HEX);
+
+            //If it receives an ACK sent by a potential parent, compare with the current parent candidate
+            byte newHopsToGateway = ((JoinAck *)msg)->hopsToGateway;
+
+            if (newHopsToGateway != 255)
             {
-                //Serial.print("MESSAGE_JOIN_ACK: src=0x");
-                //Serial.print(nodeAddr, HEX);
-                //Serial.print(" rssi=");
-                //Serial.println(msg->rssi, HEX);
-
-                //If it receives an ACK sent by a potential parent, compare with the current parent candidate
-                byte newHopsToGateway = ((JoinAck *)msg)->hopsToGateway;
-
-                if (newHopsToGateway != 255)
+                //The remote node has a connection to the gateway
+                if (bestParentCandidate.hopsToGateway != 255)
                 {
-                    //The remote node has a connection to the gateway
-                    if (bestParentCandidate.hopsToGateway != 255)
-                    {
-                        //Case 1: Both the current parent candidate and new node are connected to the gateway
-                        //Choose the candidate with the minimum hops to the gateway while the RSSI is over the threshold
-                        //Note that the RSSI value returned here is positive, thus the smaller RSSI is better.
+                    //Case 1: Both the current parent candidate and new node are connected to the gateway
+                    //Choose the candidate with the minimum hops to the gateway while the RSSI is over the threshold
+                    //Note that the RSSI value returned here is positive, thus the smaller RSSI is better.
 
-                        if (msg->rssi <= RSSI_THRESHOLD && newHopsToGateway < bestParentCandidate.hopsToGateway)
-                        {
-                            memcpy(bestParentCandidate.parentAddr, nodeAddr, 2);
-                            bestParentCandidate.hopsToGateway = newHopsToGateway;
-                            bestParentCandidate.Rssi = msg->rssi;
-                            bestParentCandidate.lastAliveTime = getTimeMillis();
-                        }
-                    }
-                    else
+                    if (msg->rssi <= RSSI_THRESHOLD && newHopsToGateway < bestParentCandidate.hopsToGateway)
                     {
-                        //Case 2: Only the new node is connected to the gateway
-                        //We always favor the candidate with a connection to the gateway
                         memcpy(bestParentCandidate.parentAddr, nodeAddr, 2);
                         bestParentCandidate.hopsToGateway = newHopsToGateway;
                         bestParentCandidate.Rssi = msg->rssi;
-                        bestParentCandidate.lastAliveTime = getTimeMillis();
+
+                        Serial.print(F("This is a better parent (closer to gateway): "));
+                        Serial.print(msg->srcAddr[0]);
+                        Serial.println(msg->srcAddr[1]);
                     }
                 }
-                //This case is currently ignored
-                /*
+                else
+                {
+                    //Case 2: Only the new node is connected to the gateway
+                    //We always favor the candidate with a connection to the gateway
+                    memcpy(bestParentCandidate.parentAddr, nodeAddr, 2);
+                    bestParentCandidate.hopsToGateway = newHopsToGateway;
+                    bestParentCandidate.Rssi = msg->rssi;
+                }
+            }
+            //This case is currently ignored
+            /*
                 else if (bestParentCandidate.hopsToGateway == -1){
                     //Case 3: Both the current and new parent candidates does not have a connection to the gateway
                     //Compare the node address. The smaller node address should be the parent (gateway address is always larger than regular node address)
@@ -159,29 +159,32 @@ bool ForwardEngine::join()
                 }
                 */
 
-                //Other cases involve: new node -> not connected to gateway, current best parent -> connected to the gateway
-                //In this case we will not update the best parent candidate
-                break;
-            }
-            default:
-                //Serial.print("MESSAGE: type=");
-                //Serial.print(msg->type, HEX);
-                //Serial.print(" src=0x");
-                //Serial.println(nodeAddr, HEX);
-                break;
+            //Other cases involve: new node -> not connected to gateway, current best parent -> connected to the gateway
+            //In this case we will not update the best parent candidate
+            break;
+        }
+        default:
+            //Serial.print("MESSAGE: type=");
+            //Serial.print(msg->type, HEX);
+            //Serial.print(" src=0x");
+            //Serial.println(nodeAddr, HEX);
+            break;
         }
 
-        free(msg);
+        delete msg;
     }
 
     Serial.println("Discovery timeout");
 
-    if (bestParentCandidate.parentAddr[0] != myAddr[0] || bestParentCandidate.parentAddr[1] != myAddr[1] )
+    if (bestParentCandidate.parentAddr[0] != myAddr[0] || bestParentCandidate.parentAddr[1] != myAddr[1])
     {
-        Serial.print("bestParentCandidate.parentAddr = 0x");
+        //New parent has found
+        Serial.print(F("bestParentCandidate.parentAddr = 0x"));
         Serial.print(bestParentCandidate.parentAddr[0], HEX);
         Serial.println(bestParentCandidate.parentAddr[1], HEX);
+
         myParent = bestParentCandidate;
+
         hopsToGateway = bestParentCandidate.hopsToGateway + 0b1;
 
         Serial.print(F(" HopsToGateway = "));
@@ -189,9 +192,16 @@ bool ForwardEngine::join()
 
         Serial.println(F("Send JoinCFM to parent"));
         //Send a confirmation to the parent node
-        JoinCFM cfm(myAddr, numChildren);
-        
+        JoinCFM cfm(myAddr, myParent.parentAddr, numChildren);
+
         cfm.send(myDriver, myParent.parentAddr);
+
+        //Assign the alive timestamp to the parent
+        myParent.lastAliveTime = getTimeMillis();
+        
+        
+        myParent.requireChecking = false;
+
         return true;
     }
     else
@@ -234,10 +244,10 @@ bool ForwardEngine::run()
         }
     }
 
-    Serial.println("Joining successful");
+    Serial.println(F("Joining successful"));
 
-    bool checkingParent = false;
-    unsigned long prevAliveCheckTime = getTimeMillis();
+    //bool checkingParent = false;
+    unsigned long checkingStartTime = 0;
 
     GenericMessage *msg = nullptr;
 
@@ -258,10 +268,10 @@ bool ForwardEngine::run()
             {
                 //TODO: May need a limit for number of children
 
-                JoinAck ack(myAddr, hopsToGateway);
+                JoinAck ack(myAddr, nodeAddr, hopsToGateway);
                 ack.send(myDriver, nodeAddr);
 
-                Serial.print("MESSAGE_JOIN: src=0x");
+                Serial.print(F("MESSAGE_JOIN: src=0x"));
                 Serial.print(nodeAddr[0], HEX);
                 Serial.println(nodeAddr[1], HEX);
 
@@ -272,13 +282,15 @@ bool ForwardEngine::run()
                 //Add the new child to the linked list (Insert in the beginning of the linked list)
 
                 ChildNode *node = new ChildNode();
-                node->nodeAddr = msg->srcAddr;
+                node->nodeAddr[0] = msg->srcAddr[0];
+                node->nodeAddr[1] = msg->srcAddr[1];
+
                 node->next = childrenList;
 
                 childrenList = node;
                 numChildren++;
 
-                Serial.print("A new child has joined: 0x");
+                Serial.print("\nA new child has joined: 0x");
                 Serial.print(nodeAddr[0], HEX);
                 Serial.println(nodeAddr[1], HEX);
                 break;
@@ -287,12 +299,12 @@ bool ForwardEngine::run()
             {
                 //We do not need to check the message src address here since the parent should
                 //only unicast the reply message (Driver does the filtering).
-
+                Serial.println(F("ReplyAlive from parent"));
                 //If we have previously issued a checkAlive message
-                if (checkingParent)
+                if (myParent.requireChecking)
                 {
                     //The parent node is proven to be alive
-                    checkingParent = false;
+                    myParent.requireChecking = false;
 
                     //Update the last time we confirmed when the parent node was alive
                     myParent.lastAliveTime = getTimeMillis();
@@ -302,55 +314,61 @@ bool ForwardEngine::run()
             case MESSAGE_CHECK_ALIVE:
             {
                 //Parent replies back to the child node
-                ReplyAlive reply(myAddr);
+                Serial.println("I got checked by my son");
+                ReplyAlive reply(myAddr, nodeAddr);
                 reply.send(myDriver, nodeAddr);
                 break;
             }
             }
-        }
 
-        if (msg != nullptr)
-        {
-            free(msg);
-        }
-
-        //The gateway does not need to check its parent
-        if (myAddr[0] & GATEWAY_ADDRESS_MASK){
-            continue;
-        }
-
-        //If we are not current waiting for MESSAGE_REPLY_ALIVE from the parent
-        if (!checkingParent)
-        {
-            if (getTimeMillis() - myParent.lastAliveTime > checkAliveInterval)
-            {
-                //We should now check if the parent is alive
-
-                //Send out the checkAlive message to the parent
-                CheckAlive checkMsg(myAddr, 0);
-                checkMsg.send(myDriver, myParent.parentAddr);
-
-                checkingParent = true;
-                prevAliveCheckTime = getTimeMillis();
-            }
+            delete msg;
         }
         else
         {
-            //If we are still waiting for MESSAGE_REPLY_ALIVE from the parent
-            //We should check if the waiting is timed out, i.e. the parent will be treated as dead if it does not reply in time.
+            Serial.println(F("No message has been received"));
+        }
+        Serial.print(F("Free Memory= "));
+        Serial.println(freeMemory());
+        //The gateway does not need to check its parent
+        if (myAddr[0] & GATEWAY_ADDRESS_MASK)
+        {
+            continue;
+        }
 
-            if (getTimeMillis() - prevAliveCheckTime > CHECK_ALIVE_TIMEOUT)
+        unsigned long currentTime = getTimeMillis();
+
+        //The parent is currently being checked (CheckAlive Message has been sent already), but the reply has not been received yet
+        if (myParent.requireChecking)
+        {
+            //If the reply has not been received in 10 seonds
+            if (currentTime - checkingStartTime >= CHECK_ALIVE_TIMEOUT)
             {
-
-                //Redundant if checkingParent is a local variable
-                checkingParent = false;
-
                 state = INIT;
-
-                return 1;
+                Serial.println(F("CheckAlive Timeout"));
+                //loop will break
             }
         }
+        //If the parent is not being checked and has not been checked in the past 30 seconds, we might need to check the parent liveness
+        else if (currentTime - myParent.lastAliveTime >= checkAliveInterval)
+        {
+            Serial.println(F("Time to check parent"));
+            myParent.requireChecking = true;
+            //Send out the checkAlive message to the parent
+            CheckAlive checkMsg(myAddr, myParent.parentAddr, 0);
+            checkMsg.send(myDriver, myParent.parentAddr);
+
+            //record the current time
+            checkingStartTime = getTimeMillis();
+            
+            Serial.print(F("Checking start at "));
+            Serial.println(checkingStartTime);
+        }
     }
+
+    //We have disconnected from the parent
+    myParent.parentAddr[0] = myAddr[0];
+    myParent.parentAddr[1] = myAddr[1];
+    //myParent.lastAliveTime = getTimeMillis();
 
     return 1;
 }

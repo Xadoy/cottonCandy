@@ -39,7 +39,13 @@ bool EbyteDeviceDriver::init(){
     setAddress(myAddr);
     setChannel(myChannel);
     setNetId(0x00);
-    setOthers(0x40);
+
+    //6th Byte: 0101 0000
+    //Fixed-Point tranmission: enabled
+    //Listen-before-talk: enabled
+    setOthers(0x50);
+
+
     setEnableRSSI();
 
     enterTransMode();
@@ -67,7 +73,17 @@ int EbyteDeviceDriver::send(byte* destAddr, byte* msg, long msgLen){
         Serial.print(" ");
     }
     Serial.print("\n");
-    return (module->write(data, sizeof(data)));
+    int bytesSent = module->write(data, sizeof(data));
+
+    //Wait for the message written to the Ebyte chip (50ms >= 50/1200)
+    delay(50);
+
+    //Wait till Ebyte has transmitted the message
+    while (digitalRead(this->aux_pin) != HIGH)
+    {
+    }
+
+    return bytesSent;
 }
 
 

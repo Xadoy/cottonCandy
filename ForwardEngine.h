@@ -18,8 +18,8 @@
 /* The default time for discovery is 10 seconds */
 #define DISCOVERY_TIMEOUT 10000
 
-/* The default timeout value for receiving a message is 5 seconds */
-#define RECEIVE_TIMEOUT 5000
+/* The default timeout value for receiving a message is 1 seconds */
+#define RECEIVE_TIMEOUT 1000
 
 /* The RSSI threshold for choosing a parent node */
 #define RSSI_THRESHOLD 60
@@ -38,7 +38,8 @@ struct ParentInfo{
     byte hopsToGateway;
     
     byte parentAddr[2];
-    uint8_t Rssi;  
+    byte Rssi;  
+    bool requireChecking;
 };
 
 struct ChildNode{
@@ -104,7 +105,7 @@ private:
     /**
      * Node address
      */
-    byte* myAddr;
+    byte myAddr[2];
 
     /**
      * DeviceDriver driver;
@@ -136,7 +137,7 @@ private:
      */
     ChildNode* childrenList;
 
-    unsigned long checkAliveInterval = 10000;
+    unsigned long checkAliveInterval = 30000;
 
 };
 
