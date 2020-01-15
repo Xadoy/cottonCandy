@@ -1,5 +1,6 @@
 #include <ForwardEngine.h>
-#include <EbyteDeviceDriver.h>
+// #include <EbyteDeviceDriver.h>
+#include <AdafruitDeviceDriver.h>
 
 #define LORA_RX 10
 #define LORA_TX 11
@@ -17,7 +18,8 @@ void setup() {
     while (!Serial) {
       ; // wait for serial port to connect. Needed for native USB port only
     }
-    myDriver = new EbyteDeviceDriver(LORA_RX, LORA_TX, LORA_M0, LORA_M1, LORA_AUX, myAddr, 0x09);
+    // myDriver = new EbyteDeviceDriver(LORA_RX, LORA_TX, LORA_M0, LORA_M1, LORA_AUX, myAddr, 0x09);
+    myDriver = new AdafruitDeviceDriver(myAddr, 0x09);
     myDriver->init();
     
     myEngine = new ForwardEngine(myAddr,myDriver);
@@ -28,7 +30,7 @@ void setup() {
 
 void loop() {
   
-  Serial.println("Loop starts");
+  Serial.println("Loop starts1");
   myEngine->run();
   // myDriver->send(0x5678, "Hello World", 11);
 
