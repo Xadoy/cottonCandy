@@ -22,7 +22,7 @@
 #define RECEIVE_TIMEOUT 1000
 
 /* The RSSI threshold for choosing a parent node */
-#define RSSI_THRESHOLD 60
+#define RSSI_THRESHOLD -70
 
 /* The maximum number of children a node can have */
 #define MAX_NUM_CHILDREN 5
@@ -33,12 +33,18 @@
 /* The default time interval for checking if the parent is alive */
 #define CHECK_ALIVE_TIMEOUT 10000
 
+/* The minimum backoff time when the node reply back */
+#define MIN_BACKOFF_TIME 100
+
+/* The maximum backoff time when the node reply back */
+#define MAX_BACKOFF_TIME 3000
+
 struct ParentInfo{
     unsigned long lastAliveTime;
     byte hopsToGateway;
     
     byte parentAddr[2];
-    byte Rssi;  
+    int Rssi;  
     bool requireChecking;
 };
 

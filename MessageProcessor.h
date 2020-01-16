@@ -35,7 +35,7 @@ public:
     /**
      * For every message receveid, there will be an RSSI value associated
      */
-    uint8_t rssi;
+    int rssi;
 
     GenericMessage(byte type, byte* srcAddr, byte* destAddr);
     // return number of bytes sent

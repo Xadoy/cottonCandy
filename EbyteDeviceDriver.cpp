@@ -61,19 +61,23 @@ bool EbyteDeviceDriver::init(){
  * setting dest address to FFFF;
  */ 
 int EbyteDeviceDriver::send(byte* destAddr, byte* msg, long msgLen){
-    byte data[3 + msgLen];
+
+    long totalLen = 3 + msgLen;
+
+    byte* data = new byte[totalLen];
     memcpy(data, destAddr, 2);
     data[2] = (byte)myChannel;
     
     memcpy(data + 3, msg, msgLen);
-    Serial.print("Messsage to be sent 0x");
+    Serial.print(F("Messsage to be sent 0x"));
 
-    for(int i = 0; i < msgLen + 3; i++){
+    for(int i = 0; i < totalLen; i++){
         Serial.print(data[i], HEX);
         Serial.print(" ");
     }
     Serial.print("\n");
-    int bytesSent = module->write(data, sizeof(data));
+    
+    int bytesSent = module->write(data, totalLen);
 
     //Wait for the message written to the Ebyte chip (50ms >= 50/1200)
     delay(50);
@@ -82,6 +86,8 @@ int EbyteDeviceDriver::send(byte* destAddr, byte* msg, long msgLen){
     while (digitalRead(this->aux_pin) != HIGH)
     {
     }
+
+    delete data;
 
     return bytesSent;
 }

@@ -14,6 +14,12 @@ ForwardEngine::ForwardEngine(byte *addr, DeviceDriver *driver)
 
     numChildren = 0;
     //childrenList = nullptr;
+
+    //Here we will set the random seed to the node its own address
+    //analogRead(A0) can also be used. Interesting to find out if it is better
+    unsigned long seed = myAddr[0] << 8 + myAddr[1];
+
+    randomSeed(seed);
 }
 
 ForwardEngine::~ForwardEngine()
@@ -112,10 +118,11 @@ bool ForwardEngine::join()
         {
         case MESSAGE_JOIN_ACK:
         {
-            //Serial.print("MESSAGE_JOIN_ACK: src=0x");
-            //Serial.print(nodeAddr, HEX);
-            //Serial.print(" rssi=");
-            //Serial.println(msg->rssi, HEX);
+            Serial.print(F("MESSAGE_JOIN_ACK: src=0x"));
+            Serial.print(nodeAddr[0], HEX);
+            Serial.print(nodeAddr[1], HEX);
+            Serial.print(" rssi=");
+            Serial.println(msg->rssi, DEC);
 
             //If it receives an ACK sent by a potential parent, compare with the current parent candidate
             byte newHopsToGateway = ((JoinAck *)msg)->hopsToGateway;
@@ -129,15 +136,13 @@ bool ForwardEngine::join()
                     //Choose the candidate with the minimum hops to the gateway while the RSSI is over the threshold
                     //Note that the RSSI value returned here is positive, thus the smaller RSSI is better.
 
-                    if (msg->rssi <= RSSI_THRESHOLD && newHopsToGateway < bestParentCandidate.hopsToGateway)
+                    if (msg->rssi >= RSSI_THRESHOLD && newHopsToGateway < bestParentCandidate.hopsToGateway)
                     {
                         memcpy(bestParentCandidate.parentAddr, nodeAddr, 2);
                         bestParentCandidate.hopsToGateway = newHopsToGateway;
                         bestParentCandidate.Rssi = msg->rssi;
 
-                        Serial.print(F("This is a better parent (closer to gateway): "));
-                        Serial.print(msg->srcAddr[0]);
-                        Serial.println(msg->srcAddr[1]);
+                        Serial.println(F("This is a better parent (closer to gateway)"));
                     }
                 }
                 else
@@ -147,7 +152,10 @@ bool ForwardEngine::join()
                     memcpy(bestParentCandidate.parentAddr, nodeAddr, 2);
                     bestParentCandidate.hopsToGateway = newHopsToGateway;
                     bestParentCandidate.Rssi = msg->rssi;
+                    Serial.println(F("This is the first new parent"));
                 }
+            }else{
+                Serial.println(F("The node does not have a path to gateway. Discard"));
             }
             //This case is currently ignored
             /*
@@ -272,6 +280,19 @@ bool ForwardEngine::run()
                 //TODO: May need a limit for number of children
 
                 JoinAck ack(myAddr, nodeAddr, hopsToGateway);
+
+                // Introduce some random time backoff to prevent collision
+                // From our experiments, we noticed packet losses when multiple nodes send joinACK instantly
+                // upon receiving a join message. This cause some packets to go missing (Even LBT in EBYTE can
+                // not help since the sending happened at almost the same time)
+
+                long backoff = random(MIN_BACKOFF_TIME, MAX_BACKOFF_TIME);
+
+                Serial.print(F("Sleep for some time before sending JoinAck: "));
+                Serial.println(backoff);
+
+                sleepForMillis(backoff);
+
                 ack.send(myDriver, nodeAddr);
 
                 Serial.print(F("MESSAGE_JOIN: src=0x"));
