@@ -43,7 +43,7 @@ struct ParentInfo{
 };
 
 struct ChildNode{
-    byte* nodeAddr;
+    byte nodeAddr[2];
 
     ChildNode* next;
 };

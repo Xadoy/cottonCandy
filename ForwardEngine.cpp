@@ -13,11 +13,13 @@ ForwardEngine::ForwardEngine(byte *addr, DeviceDriver *driver)
     myParent.hopsToGateway = 255;
 
     numChildren = 0;
-    childrenList = nullptr;
+    //childrenList = nullptr;
 }
 
 ForwardEngine::~ForwardEngine()
 {
+    //TODO: need to do some clean up here
+    /*
     ChildNode *iter = childrenList;
     while (iter != nullptr)
     {
@@ -26,6 +28,7 @@ ForwardEngine::~ForwardEngine()
         iter = temp->next;
         delete temp;
     }
+    */
 }
 
 void ForwardEngine::setAddr(byte *addr)
@@ -89,7 +92,7 @@ bool ForwardEngine::join()
      * It is possible that the node did not receive any above messages at all. In this case, the
      * loop will timeout after a period of DISCOVERY_TIMEOUT. 
      */
-    while (getTimeMillis() - previousTime < DISCOVERY_TIMEOUT)
+    while ((unsigned long)(getTimeMillis() - previousTime) < DISCOVERY_TIMEOUT)
     {
 
         //Now try to receive the message
@@ -279,8 +282,9 @@ bool ForwardEngine::run()
             }
             case MESSAGE_JOIN_CFM:
             {
+                //TODO: The current link list might not be necessary. Need to implement this
                 //Add the new child to the linked list (Insert in the beginning of the linked list)
-
+                /*
                 ChildNode *node = new ChildNode();
                 node->nodeAddr[0] = msg->srcAddr[0];
                 node->nodeAddr[1] = msg->srcAddr[1];
@@ -288,6 +292,7 @@ bool ForwardEngine::run()
                 node->next = childrenList;
 
                 childrenList = node;
+                */
                 numChildren++;
 
                 Serial.print("\nA new child has joined: 0x");
@@ -349,7 +354,7 @@ bool ForwardEngine::run()
             }
         }
         //If the parent is not being checked and has not been checked in the past 30 seconds, we might need to check the parent liveness
-        else if (currentTime - myParent.lastAliveTime >= checkAliveInterval)
+        else if ((unsigned long)(currentTime - myParent.lastAliveTime) >= checkAliveInterval)
         {
             Serial.println(F("Time to check parent"));
             myParent.requireChecking = true;

@@ -163,7 +163,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
     char msgType = -1;
     GenericMessage* msg = nullptr;
 
-    while(getTimeMillis() - startTime < timeout)
+    while((unsigned long)(getTimeMillis() - startTime) < timeout)
     {
         // get first char, check msg type
         msgType = driver->recv();
