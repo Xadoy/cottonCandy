@@ -107,6 +107,11 @@ public:
      */
     byte* getParentAddr();
 
+    void setGatewayReqTime(unsigned long gatewayReqTime);
+
+    unsigned long getGatewayReqTime();
+
+
 private:
     /**
      * Node address
@@ -145,6 +150,20 @@ private:
 
     unsigned long checkAliveInterval = 30000;
 
+    /**
+     * Time interval for gateway to request data from nodes
+     */
+    unsigned long gatewayReqTime = 0; 
+
+    /**
+     * The last time that gateway sends out a request
+     */
+    unsigned long lastReqTime;
+
+    /**
+     * Sequence Number used to identify each Gateway Request
+     */ 
+    uint8_t seqNum = 0;
 };
 
 #endif

@@ -17,7 +17,7 @@
 #define MSG_LEN_CHECK_ALIVE       6
 #define MSG_LEN_REPLY_ALIVE       5
 #define MSG_LEN_GATEWAY_REQ       6
-#define MSG_LEN_HEADER_NODE_REPLY 8
+#define MSG_LEN_HEADER_NODE_REPLY 7
 
 
 #include "DeviceDriver.h"
@@ -103,12 +103,11 @@ public:
 class NodeReply: public GenericMessage
 {
 public:
-    byte numOfNodes;
     byte seqNum;
     byte dataLength;
-    byte* data; // maximum length 128 bytes
+    byte* data; // maximum length 64 bytes
 
-    NodeReply(byte* srcAddr, byte* destAddr, byte numOfNodes, byte seqNum, 
+    NodeReply(byte* srcAddr, byte* destAddr, byte seqNum, 
                 byte dataLength, byte* data);
     int send(DeviceDriver* driver, byte* destAddr);
 };

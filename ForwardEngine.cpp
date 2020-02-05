@@ -13,7 +13,7 @@ ForwardEngine::ForwardEngine(byte *addr, DeviceDriver *driver)
     myParent.hopsToGateway = 255;
 
     numChildren = 0;
-    //childrenList = nullptr;
+    childrenList = nullptr;
 
     //Here we will set the random seed to the node its own address
     //analogRead(A0) can also be used. Interesting to find out if it is better
@@ -25,7 +25,7 @@ ForwardEngine::ForwardEngine(byte *addr, DeviceDriver *driver)
 ForwardEngine::~ForwardEngine()
 {
     //TODO: need to do some clean up here
-    /*
+    
     ChildNode *iter = childrenList;
     while (iter != nullptr)
     {
@@ -34,7 +34,7 @@ ForwardEngine::~ForwardEngine()
         iter = temp->next;
         delete temp;
     }
-    */
+    
 }
 
 void ForwardEngine::setAddr(byte *addr)
@@ -51,6 +51,17 @@ byte *ForwardEngine::getParentAddr()
 {
     return this->myParent.parentAddr;
 }
+
+void ForwardEngine::setGatewayReqTime(unsigned long gatewayReqTime)
+{
+    this->gatewayReqTime = gatewayReqTime;
+}
+
+unsigned long ForwardEngine::getGatewayReqTime()
+{
+    return this->gatewayReqTime;
+}
+
 
 /**
  * The join function is responsible for sending out a beacon to discover neighboring 
@@ -260,6 +271,9 @@ bool ForwardEngine::run()
     //bool checkingParent = false;
     unsigned long checkingStartTime = 0;
 
+    // the request time starts when Gateway is up
+    lastReqTime = getTimeMillis();
+
     GenericMessage *msg = nullptr;
 
     //The core network operations are carried out here
@@ -305,7 +319,7 @@ bool ForwardEngine::run()
             {
                 //TODO: The current link list might not be necessary. Need to implement this
                 //Add the new child to the linked list (Insert in the beginning of the linked list)
-                /*
+                
                 ChildNode *node = new ChildNode();
                 node->nodeAddr[0] = msg->srcAddr[0];
                 node->nodeAddr[1] = msg->srcAddr[1];
@@ -313,7 +327,7 @@ bool ForwardEngine::run()
                 node->next = childrenList;
 
                 childrenList = node;
-                */
+                
                 numChildren++;
 
                 Serial.print("\nA new child has joined: 0x");
@@ -345,6 +359,73 @@ bool ForwardEngine::run()
                 reply.send(myDriver, nodeAddr);
                 break;
             }
+            case MESSAGE_GATEWAY_REQ:
+            {
+                //This shouldn't happen, but in case gateway should ignore this message
+                if(myAddr[0] & GATEWAY_ADDRESS_MASK)
+                {
+                    break;
+                }
+                else
+                {
+                    //A node forwards the req to its children and send back the reply with its data
+                    ChildNode *iter = childrenList;
+                    while (iter)
+                    {
+                        GatewayRequest gwReq(myAddr, iter->nodeAddr, ((GatewayRequest*)msg)->seqNum);
+                        gwReq.send(myDriver, iter->nodeAddr);
+                        iter = iter->next;
+                    }
+
+                    //TODO: this should be data from callback
+                    byte* nodeData; // = blah();
+                    uint8_t dataLength; // = ....
+
+                    // send reply to its parent
+                    seqNum += 1;
+                    NodeReply nReply(myAddr, myParent.parentAddr, seqNum, dataLength, nodeData);
+
+                    // backoff to avoid collision
+                    long backoff = random(MIN_BACKOFF_TIME, MAX_BACKOFF_TIME);
+                    Serial.print(F("Sleep for some time before forwarding: "));
+                    Serial.println(backoff);
+                    sleepForMillis(backoff);
+
+                    nReply.send(myDriver, myParent.parentAddr);
+                    
+                }
+            }
+            case MESSAGE_NODE_REPLY:
+            {
+                // Gateway should handle this
+                if(myAddr[0] & GATEWAY_ADDRESS_MASK)
+                {
+                    // Should be what gateway is waiting for
+                    if(((NodeReply*)msg)->seqNum != seqNum)
+                    {
+                        Serial.print("Gateway got wrong seqNum: ");
+                        Serial.print(((NodeReply*)msg)->seqNum);
+                        Serial.print("  It should be: ");
+                        Serial.println(seqNum);
+                        break;
+                    }
+                    // TODO: Gateway should use a callback to process the data 
+                }
+                // Node should forward this up to its parent
+                else
+                {
+                    NodeReply nReply(msg->srcAddr, myParent.parentAddr, ((NodeReply*)msg)->seqNum, ((NodeReply*)msg)->dataLength, ((NodeReply*)msg)->data);
+
+                    // backoff to avoid collision
+                    long backoff = random(MIN_BACKOFF_TIME, MAX_BACKOFF_TIME);
+                    Serial.print(F("Sleep for some time before forwarding: "));
+                    Serial.println(backoff);
+                    sleepForMillis(backoff);
+
+                    nReply.send(myDriver, myParent.parentAddr);
+                }
+            }
+
             }
 
             delete msg;
@@ -355,9 +436,35 @@ bool ForwardEngine::run()
         }
         Serial.print(F("Free Memory= "));
         Serial.println(freeMemory());
+
         //The gateway does not need to check its parent
         if (myAddr[0] & GATEWAY_ADDRESS_MASK)
         {
+            // prepare to send out request
+            if (gatewayReqTime == 0)
+            {
+                Serial.println("Gateway reqtime is 0 (not set)");
+                continue;
+            }
+            if (getTimeMillis() - lastReqTime >= gatewayReqTime)
+            {
+                // request data from all children
+                seqNum += 1;
+                lastReqTime = getTimeMillis();
+
+                Serial.println("Now Gateway sends out request!");
+                Serial.print("  SeqNum is: ");
+                Serial.println(seqNum);
+
+                ChildNode *iter = childrenList;
+                while (iter)
+                {
+                    GatewayRequest gwReq(myAddr, iter->nodeAddr, seqNum);
+                    gwReq.send(myDriver, iter->nodeAddr);
+                    iter = iter->next;
+                }
+            }
+
             continue;
         }
 

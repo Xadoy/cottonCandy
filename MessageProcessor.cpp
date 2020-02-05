@@ -130,10 +130,9 @@ int GatewayRequest::send(DeviceDriver* driver, byte* destAddr)
 }
 
 /*--------------------NodeReply Message-------------------*/
-NodeReply::NodeReply(byte* srcAddr, byte* destAddr, byte numOfNodes, byte seqNum, 
+NodeReply::NodeReply(byte* srcAddr, byte* destAddr, byte seqNum, 
                 byte dataLength, byte* data) : GenericMessage(MESSAGE_NODE_REPLY, srcAddr, destAddr)
 {
-    this->numOfNodes = numOfNodes;
     this->seqNum = seqNum;
     this->dataLength = dataLength;
     memcpy(this->data, data, dataLength);
@@ -149,9 +148,8 @@ int NodeReply::send(DeviceDriver* driver, byte* destAddr)
     byte msg[dataLength + MSG_LEN_HEADER_NODE_REPLY];
     copyTypeAndAddr(msg);
 
-    msg[5] = numOfNodes;
-    msg[6] = seqNum;
-    msg[7] = dataLength;
+    msg[5] = seqNum;
+    msg[6] = dataLength;
     memmove(msg + 6, data, dataLength);
 
     return ( driver->send(destAddr, msg, sizeof(msg)) );
@@ -289,13 +287,12 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
             byte destAddr[2];
             memcpy(destAddr, headerBuff + 2, 2);
 
-            byte numOfNodes = headerBuff[4];
-            byte seqNum = headerBuff[5];
-            byte dataLength = headerBuff[6];
+            byte seqNum = headerBuff[4];
+            byte dataLength = headerBuff[5];
 
             byte* data = readMsgFromBuff(driver, dataLength);
 
-            msg = new NodeReply(srcAddr, destAddr, numOfNodes, seqNum, dataLength, data);
+            msg = new NodeReply(srcAddr, destAddr, seqNum, dataLength, data);
             delete[] data;
             delete[] headerBuff;
             break;
