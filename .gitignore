@@ -1,6 +1,5 @@
 
 .DS_Store
 .vscode/settings.json
-EByteMonitor/log.txt
 *.dot
-EByteMonitor/topology_info.json
+log.txt
