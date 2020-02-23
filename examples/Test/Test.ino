@@ -13,6 +13,23 @@ ForwardEngine* myEngine;
 DeviceDriver* myDriver;
 byte myAddr[2] = {0x00, 0xA1};
 
+
+void onReceiveRequest(byte **data, byte *len) {
+  Serial.println("onReciveRequest callback");
+  (*data)[0] = 0xD;
+  (*data)[1] = 0xE;
+  (*data)[2] = 0xA;
+  (*data)[3] = 0xD;
+  (*data)[4] = 0xB;
+  (*data)[5] = 0xE;
+  (*data)[6] = 0xE;
+  (*data)[7] = 0xF;
+  *len = 0x08;
+  for(int i = 0; i < *len; i++){
+      Serial.print(((*data)[i]),HEX);
+  }
+}
+
 void setup() {
     Serial.begin(57600);
     while (!Serial) {
@@ -23,7 +40,8 @@ void setup() {
     myDriver->init();
     
     myEngine = new ForwardEngine(myAddr,myDriver);
-    
+    myEngine->onReceiveRequest(onReceiveRequest);
+
     Serial.println("Free memory left: ");
     Serial.println(freeMemory());
 }
