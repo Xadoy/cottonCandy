@@ -150,7 +150,7 @@ int NodeReply::send(DeviceDriver* driver, byte* destAddr)
 
     msg[5] = seqNum;
     msg[6] = dataLength;
-    memmove(msg + 6, data, dataLength);
+    memmove(msg + 7, data, dataLength);
 
     return ( driver->send(destAddr, msg, sizeof(msg)) );
 }
@@ -328,7 +328,7 @@ byte* readMsgFromBuff(DeviceDriver* driver, uint8_t msgLen)
             byte c = driver->recv();
             buff[i] = c;
             Serial.print(buff[i], HEX);
-            Serial.print(" ");
+            Serial.print(" _ ");
             i++;
         }   
         // if(c == 0xFF){
