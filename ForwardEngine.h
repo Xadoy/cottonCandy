@@ -111,6 +111,9 @@ public:
 
     unsigned long getGatewayReqTime();
 
+    void onReceiveRequest(void(*callback)(byte**, byte*));
+    void onReceiveResponse(void(*callback)(byte*, byte));
+
 
 private:
     /**
@@ -164,6 +167,20 @@ private:
      * Sequence Number used to identify each Gateway Request
      */ 
     uint8_t seqNum = 0;
+
+    /**
+     * callback function pointer when Node receives Gateway Requests
+     * arguments are to pass back msg and num of bytes
+     */ 
+    void (*onRecvRequest)(byte**, byte*);
+
+    /**
+     * callback function pointer when Gateway receives responses from Nodes
+     * argument is msg and num of bytes
+     */ 
+    void (*onRecvResponse)(byte*, byte);
+
+
 };
 
 #endif

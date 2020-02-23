@@ -62,6 +62,12 @@ unsigned long ForwardEngine::getGatewayReqTime()
     return this->gatewayReqTime;
 }
 
+void ForwardEngine::onReceiveRequest(void(*callback)(byte**, byte*)) {
+    this->onRecvRequest = callback;
+}
+void ForwardEngine::onReceiveResponse(void(*callback)(byte*, byte)) {
+    this->onRecvResponse = callback;
+}
 
 /**
  * The join function is responsible for sending out a beacon to discover neighboring 
@@ -378,12 +384,15 @@ bool ForwardEngine::run()
                     }
 
                     //TODO: this should be data from callback
-                    byte* nodeData; // = blah();
-                    uint8_t dataLength; // = ....
+                    byte *nodeData = new byte[64];//magic number 64 comes from MP comment
+                    byte dataLength;
+                    if(onRecvRequest)
+                        onRecvRequest(&nodeData, &dataLength);
 
                     // send reply to its parent
                     NodeReply nReply(myAddr, myParent.parentAddr, ((GatewayRequest*)msg)->seqNum, dataLength, nodeData);
 
+                    delete[] nodeData;
                     // backoff to avoid collision
                     long backoff = random(MIN_BACKOFF_TIME, MAX_BACKOFF_TIME);
                     Serial.print(F("Sleep for some time before forwarding: "));
@@ -393,6 +402,7 @@ bool ForwardEngine::run()
                     nReply.send(myDriver, myParent.parentAddr);
                     
                 }
+                break;
             }
             case MESSAGE_NODE_REPLY:
             {
@@ -417,6 +427,8 @@ bool ForwardEngine::run()
                         Serial.print(((NodeReply*)msg)->data[i], HEX);
                         Serial.print(" ");
                     }
+                    if(onRecvResponse)
+                        onRecvResponse(((NodeReply*)msg)->data, ((NodeReply*)msg)->dataLength);
                 }
                 // Node should forward this up to its parent
                 else
