@@ -382,8 +382,7 @@ bool ForwardEngine::run()
                     uint8_t dataLength; // = ....
 
                     // send reply to its parent
-                    seqNum += 1;
-                    NodeReply nReply(myAddr, myParent.parentAddr, seqNum, dataLength, nodeData);
+                    NodeReply nReply(myAddr, myParent.parentAddr, ((GatewayRequest*)msg)->seqNum, dataLength, nodeData);
 
                     // backoff to avoid collision
                     long backoff = random(MIN_BACKOFF_TIME, MAX_BACKOFF_TIME);
@@ -409,7 +408,15 @@ bool ForwardEngine::run()
                         Serial.println(seqNum);
                         break;
                     }
-                    // TODO: Gateway should use a callback to process the data 
+                    // TODO: Gateway should use a callback to process the data
+                    Serial.print("Response: ");
+                    Serial.println(((NodeReply*)msg)->seqNum);
+                    Serial.print("Content: ");
+                    for(int i = 0; i < ((NodeReply*)msg)->dataLength; i++){
+                        Serial.print("0x");
+                        Serial.print(((NodeReply*)msg)->data[i], HEX);
+                        Serial.print(" ");
+                    }
                 }
                 // Node should forward this up to its parent
                 else
@@ -424,6 +431,7 @@ bool ForwardEngine::run()
 
                     nReply.send(myDriver, myParent.parentAddr);
                 }
+                break;
             }
 
             }
