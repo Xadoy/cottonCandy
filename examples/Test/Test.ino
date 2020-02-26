@@ -1,4 +1,4 @@
-#include <ForwardEngine.h>
+#include <LoRaMesh.h>
  #include <EbyteDeviceDriver.h>
 //#include <AdafruitDeviceDriver.h>
 
@@ -9,7 +9,7 @@
 #define LORA_M1 3
 #define LORA_AUX 4
 
-ForwardEngine* myEngine;
+LoRaMesh* manager;
 DeviceDriver* myDriver;
 byte myAddr[2] = {0x00, 0xA1};
 
@@ -39,8 +39,8 @@ void setup() {
 //    myDriver = new AdafruitDeviceDriver(myAddr, 0x09);
     myDriver->init();
     
-    myEngine = new ForwardEngine(myAddr,myDriver);
-    myEngine->onReceiveRequest(onReceiveRequest);
+    manager = new LoRaMesh(myAddr,myDriver);
+    manager->onReceiveRequest(onReceiveRequest);
 
     Serial.println("Free memory left: ");
     Serial.println(freeMemory());
@@ -49,7 +49,7 @@ void setup() {
 void loop() {
   
   Serial.println("Loop starts1");
-  myEngine->run();
+  manager->run();
   // myDriver->send(0x5678, "Hello World", 11);
 
   //Serial.println("Free memory left: ");
