@@ -521,6 +521,7 @@ bool ForwardEngine::run()
     //We have disconnected from the parent
     myParent.parentAddr[0] = myAddr[0];
     myParent.parentAddr[1] = myAddr[1];
+    myParent.hopsToGateway = 255;
     //myParent.lastAliveTime = getTimeMillis();
 
     return 1;
