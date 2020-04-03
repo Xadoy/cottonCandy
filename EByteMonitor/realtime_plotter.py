@@ -94,6 +94,19 @@ def animate(i, ser, file):
             node_list.append(src_addr)
             G.add_node(src_addr)
 
+        # If a previously discovered node starts join again, it means the connection with parent is down
+        # Thus we need to find and remove this edge
+        if msg_type == TYPE_MESSAGE_JOIN and src_addr in node_list and len(G.edges(src_addr)) > 0:
+            print(str(src_addr) + " is self-healing")
+            for e in G.edges:
+                child, parent = e
+                if child == src_addr:
+                    print("Connection " + str(e) +" is off. Removing the edge")
+                    G.remove_edge(child, parent)
+                    del edge_labels[e]
+                    break
+
+
     elif msg_type == TYPE_MESSAGE_JOIN_CFM:
         # Receiving a JOIN_CFM message means that the dest node becomes the parent of the src node
 
@@ -101,10 +114,6 @@ def animate(i, ser, file):
         if dest_addr not in node_list:
             node_list.append(src_addr)
 
-        node_info = {}
-        node_info['parent'] = dest_addr
-        node_info['time_joined'] = current_time
-        node_info['parent_last_alive'] = current_time
 
         edge_labels[edge] = 'Connected: ' + current_time
 
@@ -120,6 +129,12 @@ def animate(i, ser, file):
             G.add_edge(src_addr, dest_addr)
 
         edge_labels[edge] = 'Connected: ' + current_time
+
+    elif msg_type == TYPE_MESSAGE_NODE_REPLY:
+
+        datalen = int.from_bytes(ser.read(1), byteorder='big')
+
+        print("Reply = " + ser.read(datalen).hex().upper())
 
     # Update the plot
     plot()
