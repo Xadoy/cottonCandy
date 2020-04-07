@@ -135,7 +135,11 @@ NodeReply::NodeReply(byte* srcAddr, byte* destAddr, byte seqNum,
 {
     this->seqNum = seqNum;
     this->dataLength = dataLength;
+    this->data = new byte[dataLength];
     memcpy(this->data, data, dataLength);
+}
+NodeReply::~NodeReply() {
+    delete this->data;
 }
 
 int NodeReply::send(DeviceDriver* driver, byte* destAddr)
@@ -327,8 +331,8 @@ byte* readMsgFromBuff(DeviceDriver* driver, uint8_t msgLen)
         {
             byte c = driver->recv();
             buff[i] = c;
-            Serial.print(buff[i], HEX);
-            Serial.print(" _ ");
+            // Serial.print(buff[i], HEX);
+            // Serial.print(" _ ");
             i++;
         }   
         // if(c == 0xFF){

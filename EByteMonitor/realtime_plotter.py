@@ -17,6 +17,8 @@ edge_labels={}
 
 G = nx.Graph()
 
+node_info={}
+
 MESSAGE_TYPE_STRING = ["MESSAGE_JOIN", "MESSAGE_JOIN_ACK", "MESSAGE_JOIN_CFM",
                        "MESSAGE_CHECK_ALIVE", "MESSAGE_REPLY_ALIVE",
                        "MESSAGE_GATEWAY_REQ", "MESSAGE_NODE_REPLY", "MESSAGE_MULTIHOP"]
@@ -97,15 +99,25 @@ def animate(i, ser, file):
         # If a previously discovered node starts join again, it means the connection with parent is down
         # Thus we need to find and remove this edge
         if msg_type == TYPE_MESSAGE_JOIN and src_addr in node_list and len(G.edges(src_addr)) > 0:
-            print(str(src_addr) + " is self-healing")
-            for e in G.edges:
-                child, parent = e
-                if child == src_addr:
-                    print("Connection " + str(e) +" is off. Removing the edge")
-                    G.remove_edge(child, parent)
-                    del edge_labels[e]
-                    break
+            parent = node_info.get(src_addr)
 
+            edge_to_remove = (src_addr, parent)
+
+            G.remove_edge(src_addr, parent)
+            del edge_labels[edge_to_remove]
+            # print(str(src_addr) + " is self-healing")
+            # for e in G.edges:
+                
+            #     child, parent = e
+            #     if child == src_addr or parent == src_addr:
+            #         print("Connection " + str(e) +" is off. Removing the edge")
+                    
+            #         if edge_labels.get(e) is None:
+            #             continue
+            #         else:
+            #             G.remove_edge(child, parent)
+            #             del edge_labels[e]
+            #             break
 
     elif msg_type == TYPE_MESSAGE_JOIN_CFM:
         # Receiving a JOIN_CFM message means that the dest node becomes the parent of the src node
@@ -116,6 +128,8 @@ def animate(i, ser, file):
 
 
         edge_labels[edge] = 'Connected: ' + current_time
+
+        node_info[src_addr] = dest_addr
 
         G.add_edge(src_addr, dest_addr)
 

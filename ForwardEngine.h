@@ -151,7 +151,7 @@ private:
      */
     ChildNode* childrenList;
 
-    unsigned long checkAliveInterval = 30000;
+    unsigned long checkAliveInterval = 300000;
 
     /**
      * Time interval for gateway to request data from nodes

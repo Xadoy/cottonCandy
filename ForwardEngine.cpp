@@ -25,7 +25,7 @@ ForwardEngine::ForwardEngine(byte *addr, DeviceDriver *driver)
 ForwardEngine::~ForwardEngine()
 {
     //TODO: need to do some clean up here
-    
+
     ChildNode *iter = childrenList;
     while (iter != nullptr)
     {
@@ -34,7 +34,6 @@ ForwardEngine::~ForwardEngine()
         iter = temp->next;
         delete temp;
     }
-    
 }
 
 void ForwardEngine::setAddr(byte *addr)
@@ -62,10 +61,12 @@ unsigned long ForwardEngine::getGatewayReqTime()
     return this->gatewayReqTime;
 }
 
-void ForwardEngine::onReceiveRequest(void(*callback)(byte**, byte*)) {
+void ForwardEngine::onReceiveRequest(void (*callback)(byte **, byte *))
+{
     this->onRecvRequest = callback;
 }
-void ForwardEngine::onReceiveResponse(void(*callback)(byte*, byte)) {
+void ForwardEngine::onReceiveResponse(void (*callback)(byte *, byte))
+{
     this->onRecvResponse = callback;
 }
 
@@ -129,7 +130,7 @@ bool ForwardEngine::join()
         }
 
         byte *nodeAddr = msg->srcAddr;
-        Serial.print("Received msg type = ");
+        // Serial.print("Received msg type = ");
         Serial.println(msg->type);
         switch (msg->type)
         {
@@ -171,7 +172,9 @@ bool ForwardEngine::join()
                     bestParentCandidate.Rssi = msg->rssi;
                     Serial.println(F("This is the first new parent"));
                 }
-            }else{
+            }
+            else
+            {
                 Serial.println(F("The node does not have a path to gateway. Discard"));
             }
             //This case is currently ignored
@@ -226,8 +229,7 @@ bool ForwardEngine::join()
 
         //Assign the alive timestamp to the parent
         myParent.lastAliveTime = getTimeMillis();
-        
-        
+
         myParent.requireChecking = false;
 
         return true;
@@ -290,9 +292,9 @@ bool ForwardEngine::run()
         if (msg != nullptr)
         {
 
-            byte* nodeAddr = msg->srcAddr;
+            byte *nodeAddr = msg->srcAddr;
 
-            //Based on the receved message, do the corresponding actions
+            //Based on the received message, do the corresponding actions
             switch (msg->type)
             {
             case MESSAGE_JOIN:
@@ -325,7 +327,7 @@ bool ForwardEngine::run()
             {
                 //TODO: The current link list might not be necessary. Need to implement this
                 //Add the new child to the linked list (Insert in the beginning of the linked list)
-                
+
                 ChildNode *node = new ChildNode();
                 node->nodeAddr[0] = msg->srcAddr[0];
                 node->nodeAddr[1] = msg->srcAddr[1];
@@ -333,7 +335,7 @@ bool ForwardEngine::run()
                 node->next = childrenList;
 
                 childrenList = node;
-                
+
                 numChildren++;
 
                 Serial.print("\nA new child has joined: 0x");
@@ -360,7 +362,7 @@ bool ForwardEngine::run()
             case MESSAGE_CHECK_ALIVE:
             {
                 //Parent replies back to the child node
-                Serial.println("I got checked by my son");
+                Serial.println("I got checked by my child node");
                 ReplyAlive reply(myAddr, nodeAddr);
                 reply.send(myDriver, nodeAddr);
                 break;
@@ -368,72 +370,79 @@ bool ForwardEngine::run()
             case MESSAGE_GATEWAY_REQ:
             {
                 //This shouldn't happen, but in case gateway should ignore this message
-                if(myAddr[0] & GATEWAY_ADDRESS_MASK)
+                if (myAddr[0] & GATEWAY_ADDRESS_MASK)
                 {
                     break;
                 }
                 else
                 {
-                    //A node forwards the req to its children and send back the reply with its data
-                    ChildNode *iter = childrenList;
-                    while (iter)
-                    {
-                        GatewayRequest gwReq(myAddr, iter->nodeAddr, ((GatewayRequest*)msg)->seqNum);
-                        gwReq.send(myDriver, iter->nodeAddr);
-                        iter = iter->next;
-                    }
+                    // we know our parent is alive
+                    myParent.requireChecking = false;
+                    myParent.lastAliveTime = getTimeMillis();
 
-                    //TODO: this should be data from callback
-                    byte *nodeData = new byte[64];//magic number 64 comes from MP comment
-                    byte dataLength;
-                    if(onRecvRequest)
-                        onRecvRequest(&nodeData, &dataLength);
-
-                    // send reply to its parent
-                    NodeReply nReply(myAddr, myParent.parentAddr, ((GatewayRequest*)msg)->seqNum, dataLength, nodeData);
-
-                    delete[] nodeData;
                     // backoff to avoid collision
                     long backoff = random(MIN_BACKOFF_TIME, MAX_BACKOFF_TIME);
                     Serial.print(F("Sleep for some time before forwarding: "));
                     Serial.println(backoff);
                     sleepForMillis(backoff);
 
+                    //A node forwards the req to its children and send back the reply with its data
+                    ChildNode *iter = childrenList;
+                    while (iter)
+                    {
+                        GatewayRequest gwReq(myAddr, iter->nodeAddr, ((GatewayRequest *)msg)->seqNum);
+                        gwReq.send(myDriver, iter->nodeAddr);
+                        iter = iter->next;
+                    }
+
+                    // Use callback to get node data
+                    byte *nodeData = new byte[64]; //magic number 64 comes from MP comment
+                    byte dataLength;
+                    if (onRecvRequest)
+                        onRecvRequest(&nodeData, &dataLength);
+
+                    // send reply to its parent
+                    NodeReply nReply(myAddr, myParent.parentAddr, ((GatewayRequest *)msg)->seqNum, dataLength, nodeData);
+
+                    delete[] nodeData;
+
+
                     nReply.send(myDriver, myParent.parentAddr);
-                    
                 }
                 break;
             }
             case MESSAGE_NODE_REPLY:
             {
                 // Gateway should handle this
-                if(myAddr[0] & GATEWAY_ADDRESS_MASK)
+                if (myAddr[0] & GATEWAY_ADDRESS_MASK)
                 {
                     // Should be what gateway is waiting for
-                    if(((NodeReply*)msg)->seqNum != seqNum)
+                    if (((NodeReply *)msg)->seqNum != seqNum)
                     {
                         Serial.print("Gateway got wrong seqNum: ");
-                        Serial.print(((NodeReply*)msg)->seqNum);
+                        Serial.print(((NodeReply *)msg)->seqNum);
                         Serial.print("  It should be: ");
                         Serial.println(seqNum);
                         break;
                     }
-                    // TODO: Gateway should use a callback to process the data
-                    Serial.print("Response: ");
-                    Serial.println(((NodeReply*)msg)->seqNum);
-                    Serial.print("Content: ");
-                    for(int i = 0; i < ((NodeReply*)msg)->dataLength; i++){
-                        Serial.print("0x");
-                        Serial.print(((NodeReply*)msg)->data[i], HEX);
-                        Serial.print(" ");
-                    }
-                    if(onRecvResponse)
-                        onRecvResponse(((NodeReply*)msg)->data, ((NodeReply*)msg)->dataLength);
+
+                    // Gateway should use a callback to process the data
+                    Serial.print("Node Reply Sequence number: ");
+                    Serial.println(((NodeReply *)msg)->seqNum);
+                    if (onRecvResponse)
+                        onRecvResponse(((NodeReply *)msg)->data, ((NodeReply *)msg)->dataLength);
+                    // Serial.print("Content: ");
+                    // for (int i = 0; i < ((NodeReply *)msg)->dataLength; i++)
+                    // {
+                    //     Serial.print("0x");
+                    //     Serial.print(((NodeReply *)msg)->data[i], HEX);
+                    //     Serial.print(" ");
+                    // }
                 }
                 // Node should forward this up to its parent
                 else
                 {
-                    NodeReply nReply(msg->srcAddr, myParent.parentAddr, ((NodeReply*)msg)->seqNum, ((NodeReply*)msg)->dataLength, ((NodeReply*)msg)->data);
+                    NodeReply nReply(msg->srcAddr, myParent.parentAddr, ((NodeReply *)msg)->seqNum, ((NodeReply *)msg)->dataLength, ((NodeReply *)msg)->data);
 
                     // backoff to avoid collision
                     long backoff = random(MIN_BACKOFF_TIME, MAX_BACKOFF_TIME);
@@ -445,17 +454,16 @@ bool ForwardEngine::run()
                 }
                 break;
             }
-
             }
 
             delete msg;
         }
-        else
-        {
-            Serial.println(F("No message has been received"));
-        }
-        Serial.print(F("Free Memory= "));
-        Serial.println(freeMemory());
+        // else
+        // {
+        //     Serial.println(F("No message has been received"));
+        // }
+        //Serial.print(F("Free Memory= "));
+        //Serial.println(freeMemory());
 
         //The gateway does not need to check its parent
         if (myAddr[0] & GATEWAY_ADDRESS_MASK)
@@ -472,8 +480,8 @@ bool ForwardEngine::run()
                 seqNum += 1;
                 lastReqTime = getTimeMillis();
 
-                Serial.println("Now Gateway sends out request!");
-                Serial.print("  SeqNum is: ");
+                Serial.print("Now Gateway sends out request: ");
+                Serial.print("SeqNum = ");
                 Serial.println(seqNum);
 
                 ChildNode *iter = childrenList;
@@ -512,7 +520,7 @@ bool ForwardEngine::run()
 
             //record the current time
             checkingStartTime = getTimeMillis();
-            
+
             Serial.print(F("Checking start at "));
             Serial.println(checkingStartTime);
         }

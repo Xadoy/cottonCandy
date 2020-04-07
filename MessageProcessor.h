@@ -109,6 +109,7 @@ public:
 
     NodeReply(byte* srcAddr, byte* destAddr, byte seqNum, 
                 byte dataLength, byte* data);
+    ~NodeReply();
     int send(DeviceDriver* driver, byte* destAddr);
 };
 
