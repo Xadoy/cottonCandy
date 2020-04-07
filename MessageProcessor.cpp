@@ -317,12 +317,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
 byte* readMsgFromBuff(DeviceDriver* driver, uint8_t msgLen)
 {
     byte* buff = new byte[msgLen];
-    /*
-    for(int i = 0; i < msgLen; i++)
-    {
-        buff[i] = driver->recv();
-    }
-    */
+
     int i = 0;
     
     while(i < msgLen)
@@ -342,20 +337,4 @@ byte* readMsgFromBuff(DeviceDriver* driver, uint8_t msgLen)
     Serial.print("\n");
     return buff;
 }
-
-/* may be deleted later
-void intToBytes(byte* bytes, int intVal)
-{
-    bytes[3] = (intVal >> 24) & 0xFF;
-    bytes[2] = (intVal >> 16) & 0xFF;
-    bytes[1] = (intVal >> 8) & 0xFF;
-    bytes[0] = intVal & 0xFF;
-}
-
-int bytesToInt(byte* bytes)
-{
-    int ret;
-    memcpy(&ret, bytes, 4);
-    return ret;
-}*/
 

@@ -120,7 +120,6 @@ bool ForwardEngine::join()
     {
 
         //Now try to receive the message
-        //TODO: receiveMessage should have a timeout value
         msg = receiveMessage(myDriver, RECEIVE_TIMEOUT);
 
         if (msg == nullptr)
@@ -325,7 +324,6 @@ bool ForwardEngine::run()
             }
             case MESSAGE_JOIN_CFM:
             {
-                //TODO: The current link list might not be necessary. Need to implement this
                 //Add the new child to the linked list (Insert in the beginning of the linked list)
 
                 ChildNode *node = new ChildNode();
@@ -530,7 +528,6 @@ bool ForwardEngine::run()
     myParent.parentAddr[0] = myAddr[0];
     myParent.parentAddr[1] = myAddr[1];
     myParent.hopsToGateway = 255;
-    //myParent.lastAliveTime = getTimeMillis();
 
     return 1;
 }
