@@ -1,5 +1,5 @@
 #include <LoRaMesh.h>
- #include <EbyteDeviceDriver.h>
+#include <EbyteDeviceDriver.h>
 //#include <AdafruitDeviceDriver.h>
 
 #define LORA_RX 10
@@ -11,19 +11,19 @@
 
 LoRaMesh* manager;
 DeviceDriver* myDriver;
-byte myAddr[2] = {0x00, 0xA1};
+byte myAddr[2] = {0x00, 0xA4};
 
 
 void onReceiveRequest(byte **data, byte *len) {
   Serial.println("onReciveRequest callback");
-  (*data)[0] = 0xD;
-  (*data)[1] = 0xE;
-  (*data)[2] = 0xA;
+  (*data)[0] = 0xA;
+  (*data)[1] = 0xB;
+  (*data)[2] = 0xC;
   (*data)[3] = 0xD;
-  (*data)[4] = 0xB;
-  (*data)[5] = 0xE;
-  (*data)[6] = 0xE;
-  (*data)[7] = 0xF;
+  (*data)[4] = 0xE;
+  (*data)[5] = 0xF;
+  (*data)[6] = 0xA;
+  (*data)[7] = 0x4;
   *len = 0x08;
   for(int i = 0; i < *len; i++){
       Serial.print(((*data)[i]),HEX);
@@ -48,12 +48,8 @@ void setup() {
 
 void loop() {
   
-  Serial.println("Loop starts1");
+  Serial.println("Loop starts");
   manager->run();
-  // myDriver->send(0x5678, "Hello World", 11);
 
-  //Serial.println("Free memory left: ");
-  //Serial.println(freeMemory());
-  //delay(3000);
 
 }

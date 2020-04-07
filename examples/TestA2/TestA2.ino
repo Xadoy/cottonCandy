@@ -1,5 +1,5 @@
 #include <LoRaMesh.h>
-//#include <EbyteDeviceDriver.h>
+// #include <EbyteDeviceDriver.h>
 #include <AdafruitDeviceDriver.h>
 
 #define LORA_RX 10
@@ -11,33 +11,37 @@
 
 LoRaMesh* manager;
 DeviceDriver* myDriver;
-byte myAddr[2] = {0x80, 0xA0};
+byte myAddr[2] = {0x00, 0xA2};
 
-void onReciveResponse(byte *data, byte len) {
-  Serial.print("\nGateway received node reply from ");
-  Serial.print((data[6]),HEX);
-  Serial.print((data[7]),HEX);
-  Serial.print(": ");
-  for(int i = 0; i < len; i++){
-      Serial.print((data[i]),HEX);
+
+void onReceiveRequest(byte **data, byte *len) {
+  Serial.println("onReciveRequest callback");
+  (*data)[0] = 0xA;
+  (*data)[1] = 0xB;
+  (*data)[2] = 0xC;
+  (*data)[3] = 0xD;
+  (*data)[4] = 0xE;
+  (*data)[5] = 0xF;
+  (*data)[6] = 0xA;
+  (*data)[7] = 0x2;
+  *len = 0x08;
+  for(int i = 0; i < *len; i++){
+      Serial.print(((*data)[i]),HEX);
   }
-  Serial.println(".");
 }
-
 
 void setup() {
     Serial.begin(57600);
     while (!Serial) {
       ; // wait for serial port to connect. Needed for native USB port only
     }
-//     myDriver = new EbyteDeviceDriver(LORA_RX, LORA_TX, LORA_M0, LORA_M1, LORA_AUX, myAddr, 0x09);
+    // myDriver = new EbyteDeviceDriver(LORA_RX, LORA_TX, LORA_M0, LORA_M1, LORA_AUX, myAddr, 0x09);
     myDriver = new AdafruitDeviceDriver(myAddr, 0x09);
     myDriver->init();
     
     manager = new LoRaMesh(myAddr,myDriver);
-    manager->setGatewayReqTime(61000);
-    manager->onReceiveResponse(onReciveResponse);
-    
+    manager->onReceiveRequest(onReceiveRequest);
+
     Serial.println("Free memory left: ");
     Serial.println(freeMemory());
 }
@@ -46,5 +50,6 @@ void loop() {
   
   Serial.println("Loop starts");
   manager->run();
+
 
 }
