@@ -3,155 +3,158 @@
 #include "Utilities.h"
 
 
-GenericMessage::GenericMessage(unsigned char type, address srcAddr)
+GenericMessage::GenericMessage(byte type, byte* srcAddr, byte* destAddr)
 {
-    this->type = type;
-    this->srcAddr = srcAddr;
+    this->type = type;  
+    
+    memcpy(this->srcAddr, srcAddr, 2);
+    memcpy(this->destAddr, destAddr, 2);
 }
 
-//Note:Little Endian reverse the order of bytes
-
-void GenericMessage::copyTypeAndAddr(char* msg)
+void GenericMessage::copyTypeAndAddr(byte* msg)
 {
     msg[0] = this->type;
-    //reverse the bytes
-    msg[1] = ((unsigned char *)&(this->srcAddr))[1];
-    msg[2] = ((unsigned char *)&(this->srcAddr))[0];
+    msg[1] = this->srcAddr[0];
+    msg[2] = this->srcAddr[1];
+    msg[3] = this->destAddr[0];
+    msg[4] = this->destAddr[1];
 }
 
-int GenericMessage::send(DeviceDriver* driver, address destAddr)
+int GenericMessage::send(DeviceDriver* driver, byte* destAddr)
 {
     if(driver == NULL)
     {
         return -1;
     }
 
-    char msg[MSG_LEN_GENERIC]; 
+    byte msg[MSG_LEN_GENERIC]; 
     copyTypeAndAddr(msg);
 
-    return ( driver->send(destAddr, msg, sizeof(msg)) );
+    return ( driver->send(destAddr, msg, MSG_LEN_GENERIC) );
+}
+
+GenericMessage::~GenericMessage(){
 }
 
 /*--------------------Join Beacon-------------------*/
-Join::Join(address srcAddr) : GenericMessage(MESSAGE_JOIN, srcAddr)
+Join::Join(byte* srcAddr, byte* destAddr) : GenericMessage(MESSAGE_JOIN, srcAddr, destAddr)
 {
 }
 
 
 /*--------------------JoinACK Message-------------------*/
-JoinAck::JoinAck(address srcAddr, int hopsToGateway) : GenericMessage(MESSAGE_JOIN_ACK, srcAddr)
+JoinAck::JoinAck(byte* srcAddr, byte* destAddr, byte hopsToGateway) : GenericMessage(MESSAGE_JOIN_ACK, srcAddr, destAddr)
 {
     this->hopsToGateway = hopsToGateway;
 }
 
-JoinAck::send(DeviceDriver* driver, address destAddr)
+int JoinAck::send(DeviceDriver* driver, byte* destAddr)
 {
     if(driver == NULL)
     {
         return -1;
     }
 
-    char msg[MSG_LEN_JOIN_ACK];
+    byte msg[MSG_LEN_JOIN_ACK];
     copyTypeAndAddr(msg);
-    // convert int to byte array
-    // when JoinAck is sent, it guarantees the hopsToGateway is positive
-    intToBytes(msg+3, this->hopsToGateway);
+    msg[5] = hopsToGateway;
 
     return ( driver->send(destAddr, msg, sizeof(msg)) );
 }
 
 /*--------------------JoinCFM Message-------------------*/
-JoinCFM::JoinCFM(address srcAddr, unsigned char depth) : GenericMessage(MESSAGE_JOIN_CFM, srcAddr)
+JoinCFM::JoinCFM(byte* srcAddr, byte* destAddr, byte depth) : GenericMessage(MESSAGE_JOIN_CFM, srcAddr, destAddr)
 {
     this->depth = depth;
 }
 
-int JoinCFM::send(DeviceDriver* driver, address destAddr)
+int JoinCFM::send(DeviceDriver* driver, byte* destAddr)
 {
     if(driver == NULL)
     {
         return -1;
     }
 
-    char msg[MSG_LEN_JOIN_CFM];
+    byte msg[MSG_LEN_JOIN_CFM];
     copyTypeAndAddr(msg);
-    msg[3] = this->depth;
+    msg[5] = depth;
 
     return ( driver->send(destAddr, msg, sizeof(msg)) );
 }
 
 /*--------------------CheckAlive Message-------------------*/
-CheckAlive::CheckAlive(address srcAddr, unsigned char depth) : GenericMessage(MESSAGE_CHECK_ALIVE, srcAddr)
+CheckAlive::CheckAlive(byte* srcAddr, byte* destAddr, byte depth) : GenericMessage(MESSAGE_CHECK_ALIVE, srcAddr, destAddr)
 {
     this->depth = depth;
 }
 
-int CheckAlive::send(DeviceDriver* driver, address destAddr)
+int CheckAlive::send(DeviceDriver* driver, byte* destAddr)
 {
     if(driver == NULL)
     {
         return -1;
     }
 
-    char msg[MSG_LEN_CHECK_ALIVE];
+    byte msg[MSG_LEN_CHECK_ALIVE];
     copyTypeAndAddr(msg);
-    msg[3] = this->depth;
+    msg[5] = depth;
 
     return ( driver->send(destAddr, msg, sizeof(msg)) );
 }
 
 
 /*--------------------ReplyAlive Message-------------------*/
-ReplyAlive::ReplyAlive(address srcAddr) : GenericMessage(MESSAGE_REPLY_ALIVE, srcAddr){
+ReplyAlive::ReplyAlive(byte* srcAddr, byte* destAddr) : GenericMessage(MESSAGE_REPLY_ALIVE, srcAddr, destAddr)
+{
   
 }
 
 /*--------------------GatewayRequest Message-------------------*/
-GatewayRequest::GatewayRequest(address srcAddr, unsigned char seqNum): GenericMessage(MESSAGE_GATEWAY_REQ, srcAddr)
+GatewayRequest::GatewayRequest(byte* srcAddr, byte* destAddr, byte seqNum): GenericMessage(MESSAGE_GATEWAY_REQ, srcAddr, destAddr)
 {
     this->seqNum = seqNum;
 }
 
-int GatewayRequest::send(DeviceDriver* driver, address destAddr)
+int GatewayRequest::send(DeviceDriver* driver, byte* destAddr)
 {
     if(driver == NULL)
     {
         return -1;
     }
 
-    char msg[MSG_LEN_GATEWAY_REQ];
+    byte msg[MSG_LEN_GATEWAY_REQ];
     copyTypeAndAddr(msg);
-    msg[3] = this->seqNum;
+    msg[5] = seqNum;
 
     return ( driver->send(destAddr, msg, sizeof(msg)) );
 }
 
 /*--------------------NodeReply Message-------------------*/
-NodeReply::NodeReply(address srcAddr, unsigned char numOfNodes, unsigned char seqNum, 
-                unsigned char dataLength, char* data) : GenericMessage(MESSAGE_NODE_REPLY, srcAddr)
+NodeReply::NodeReply(byte* srcAddr, byte* destAddr, byte seqNum, 
+                byte dataLength, byte* data) : GenericMessage(MESSAGE_NODE_REPLY, srcAddr, destAddr)
 {
-    this->type = type;
-    this->srcAddr = srcAddr;
-    this->numOfNodes = numOfNodes;
     this->seqNum = seqNum;
     this->dataLength = dataLength;
+    this->data = new byte[dataLength];
     memcpy(this->data, data, dataLength);
 }
+NodeReply::~NodeReply() {
+    delete this->data;
+}
 
-int NodeReply::send(DeviceDriver* driver, address destAddr)
+int NodeReply::send(DeviceDriver* driver, byte* destAddr)
 {
     if(driver == NULL)
     {
         return -1;
     }
 
-    char msg[this->dataLength + 6];
+    byte msg[dataLength + MSG_LEN_HEADER_NODE_REPLY];
     copyTypeAndAddr(msg);
 
-    msg[3] = this->numOfNodes;
-    msg[4] = this->seqNum;
-    msg[5] = this->dataLength;
-    memmove(msg + 6, this->data, this->dataLength);
+    msg[5] = seqNum;
+    msg[6] = dataLength;
+    memmove(msg + 7, data, dataLength);
 
     return ( driver->send(destAddr, msg, sizeof(msg)) );
 }
@@ -162,7 +165,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
     char msgType = -1;
     GenericMessage* msg = nullptr;
 
-    while(getTimeMillis() - startTime < timeout)
+    while((unsigned long)(getTimeMillis() - startTime) < timeout)
     {
         // get first char, check msg type
         msgType = driver->recv();
@@ -175,13 +178,15 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
         case MESSAGE_JOIN:
         {
             // we have already read the msg type
-            char* buff = readMsgFromBuff(driver, MSG_LEN_JOIN - 1);
+            byte* buff = readMsgFromBuff(driver, MSG_LEN_JOIN - 1);
 
             // get what we need for Join
-            address srcAddr;
-            memmove(&srcAddr, buff, 2);
+            byte srcAddr[2];
+            memcpy(srcAddr, buff, 2);
+            byte destAddr[2];
+            memcpy(destAddr, buff + 2, 2);
 
-            msg = new Join(srcAddr);
+            msg = new Join(srcAddr, destAddr);
             delete[] buff;
             break;
         }        
@@ -189,15 +194,17 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
         case MESSAGE_JOIN_ACK:
         {
             // we have already read the msg type
-            char* buff = readMsgFromBuff(driver, MSG_LEN_JOIN_ACK - 1);
+            byte* buff = readMsgFromBuff(driver, MSG_LEN_JOIN_ACK - 1);
 
             // get what we need for JoinAck
-            address srcAddr;
-            memmove(&srcAddr, buff, 2);
+            byte srcAddr[2];
+            memcpy(srcAddr, buff, 2);
+            byte destAddr[2];
+            memcpy(destAddr, buff + 2, 2);
 
-            int hopsToGateway = bytesToInt(buff+2);
+            byte hopsToGateway = buff[4];
 
-            msg = new JoinAck(srcAddr, hopsToGateway);
+            msg = new JoinAck(srcAddr, destAddr, hopsToGateway);
             delete[] buff;
             break;
         }
@@ -205,15 +212,17 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
         case MESSAGE_JOIN_CFM:
         {
             // we have already read the msg type
-            char* buff = readMsgFromBuff(driver, MSG_LEN_JOIN_CFM - 1);
+            byte* buff = readMsgFromBuff(driver, MSG_LEN_JOIN_CFM - 1);
 
             // get what we need for JoinCFM
-            address srcAddr;
-            memmove(&srcAddr, buff, 2);
+            byte srcAddr[2];
+            memcpy(srcAddr, buff, 2);
+            byte destAddr[2];
+            memcpy(destAddr, buff + 2, 2);
 
-            unsigned char depth = buff[2];
+            byte depth = buff[4];
 
-            msg = new JoinCFM(srcAddr, depth);
+            msg = new JoinCFM(srcAddr, destAddr, depth);
             delete[] buff;
             break;
         }
@@ -221,15 +230,17 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
         case MESSAGE_CHECK_ALIVE:
         {
             // we have already read the msg type
-            char* buff = readMsgFromBuff(driver, MSG_LEN_CHECK_ALIVE - 1);
+            byte* buff = readMsgFromBuff(driver, MSG_LEN_CHECK_ALIVE - 1);
 
             // get what we need for CheckAlive
-            address srcAddr;
-            memmove(&srcAddr, buff, 2);
+            byte srcAddr[2];
+            memcpy(srcAddr, buff, 2);
+            byte destAddr[2];
+            memcpy(destAddr, buff + 2, 2);
 
-            unsigned char depth = buff[2];
+            byte depth = buff[4];
 
-            msg = new CheckAlive(srcAddr, depth);
+            msg = new CheckAlive(srcAddr, destAddr, depth);
             delete[] buff;
             break;
         }
@@ -237,13 +248,15 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
         case MESSAGE_REPLY_ALIVE:
         {
             // we have already read the msg type
-            char* buff = readMsgFromBuff(driver, MSG_LEN_REPLY_ALIVE - 1);
+            byte* buff = readMsgFromBuff(driver, MSG_LEN_REPLY_ALIVE - 1);
 
             // get what we need for ReplyAlive
-            address srcAddr;
-            memmove(&srcAddr, buff, 2);
+            byte srcAddr[2];
+            memcpy(srcAddr, buff, 2);
+            byte destAddr[2];
+            memcpy(destAddr, buff + 2, 2);
 
-            msg = new ReplyAlive(srcAddr);
+            msg = new ReplyAlive(srcAddr, destAddr);
             delete[] buff;
             break;
         }
@@ -251,15 +264,17 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
         case MESSAGE_GATEWAY_REQ:
         {
             // we have already read the msg type
-            char* buff = readMsgFromBuff(driver, MSG_LEN_GATEWAY_REQ - 1);
+            byte* buff = readMsgFromBuff(driver, MSG_LEN_GATEWAY_REQ - 1);
 
             // get what we need for GatewayRequest
-            address srcAddr;
-            memmove(&srcAddr, buff, 2);
+            byte srcAddr[2];
+            memcpy(srcAddr, buff, 2);
+            byte destAddr[2];
+            memcpy(destAddr, buff + 2, 2);
 
-            unsigned char depth = buff[2];
+            byte depth = buff[4];
 
-            msg = new GatewayRequest(srcAddr, depth);
+            msg = new GatewayRequest(srcAddr, destAddr, depth);
             delete[] buff;
             break;
         }
@@ -268,20 +283,22 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
         {
             // we have already read the msg type
             // need to know the data length before getting the data
-            char addr[2];
-            addr[0] = driver->recv();
-            addr[1] = driver->recv();
-            address srcAddr;
-            memmove(&srcAddr, addr, 2);
 
-            unsigned char numOfNodes = driver->recv();
-            unsigned char seqNum = driver->recv();
-            unsigned char dataLength = driver->recv();
+            // get Header first
+            byte* headerBuff = readMsgFromBuff(driver, MSG_LEN_HEADER_NODE_REPLY - 1);
+            byte srcAddr[2];
+            memcpy(srcAddr, headerBuff, 2);
+            byte destAddr[2];
+            memcpy(destAddr, headerBuff + 2, 2);
 
-            char* data = readMsgFromBuff(driver, dataLength);
+            byte seqNum = headerBuff[4];
+            byte dataLength = headerBuff[5];
 
-            msg = new NodeReply(srcAddr, numOfNodes, seqNum, dataLength, data);
+            byte* data = readMsgFromBuff(driver, dataLength);
+
+            msg = new NodeReply(srcAddr, destAddr, seqNum, dataLength, data);
             delete[] data;
+            delete[] headerBuff;
             break;
         }
         
@@ -297,17 +314,37 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
 
 
 /*-------------------- Helpers -------------------*/
-char* readMsgFromBuff(DeviceDriver* driver, uint8_t msgLen)
+byte* readMsgFromBuff(DeviceDriver* driver, uint8_t msgLen)
 {
-    char* buff = new char[msgLen];
+    byte* buff = new byte[msgLen];
+    /*
     for(int i = 0; i < msgLen; i++)
     {
         buff[i] = driver->recv();
     }
+    */
+    int i = 0;
+    
+    while(i < msgLen)
+    {
+        if(driver->available())
+        {
+            byte c = driver->recv();
+            buff[i] = c;
+            // Serial.print(buff[i], HEX);
+            // Serial.print(" _ ");
+            i++;
+        }   
+        // if(c == 0xFF){
+        //     continue;
+        // }        
+    }
+    Serial.print("\n");
     return buff;
 }
 
-void intToBytes(char* bytes, int intVal)
+/* may be deleted later
+void intToBytes(byte* bytes, int intVal)
 {
     bytes[3] = (intVal >> 24) & 0xFF;
     bytes[2] = (intVal >> 16) & 0xFF;
@@ -315,10 +352,10 @@ void intToBytes(char* bytes, int intVal)
     bytes[0] = intVal & 0xFF;
 }
 
-int bytesToInt(char* bytes)
+int bytesToInt(byte* bytes)
 {
     int ret;
     memcpy(&ret, bytes, 4);
     return ret;
-}
+}*/
 

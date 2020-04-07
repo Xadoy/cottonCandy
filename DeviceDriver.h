@@ -5,9 +5,9 @@
 
 #include "Arduino.h"
 
-#define BROADCAST_ADDR 0xFFFF
+static byte BROADCAST_ADDR[2] = {0xFF, 0xFF};
 
-typedef unsigned short address;
+//typedef unsigned short address;
 
 class DeviceDriver{
 
@@ -27,14 +27,19 @@ public:
      * Send a stream of bytes. Takes a byte array and its length.
      * Returns number of bytes successfully sent. Returns -1 if sending failed (timeout).
      */
-    virtual int send(address destAddr, char* msg, long msgLen) = 0;
+    virtual int send(byte* destAddr, byte* msg, long msgLen) = 0;
 
     /**
      * Returns a byte received. Returns -1 if none available
      */
-    virtual char recv() = 0;
+    virtual byte recv() = 0;
 
     virtual int getLastMessageRssi() = 0;
+
+    /**
+     * Returns number of bytes that are available.
+     */
+    virtual int available() = 0;
 
 private:
     /**

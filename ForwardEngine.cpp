@@ -1,64 +1,73 @@
 #include "ForwardEngine.h"
+#include <string.h>
 
-//Default Constructor
-ForwardEngine::ForwardEngine()
+ForwardEngine::ForwardEngine(byte *addr, DeviceDriver *driver)
 {
-    myAddr = 0;
-}
+    myAddr[0] = addr[0];
+    myAddr[1] = addr[1];
 
-ForwardEngine::ForwardEngine(address addr, DeviceDriver *driver)
-{
-    myAddr = addr;
     myDriver = driver;
 
-    //Initialize the parent. Set the parent address to itself.
-    myParent.parentAddr = myAddr;
+    //A node is its own parent initially
+    memcpy(myParent.parentAddr, myAddr, 2);
+    myParent.hopsToGateway = 255;
 
     numChildren = 0;
     childrenList = nullptr;
 
-    //If the node is a gateway, it does not have to join the network to operate
-    //Gateway is distinguished by the highest bit = 1
-    if (myAddr & GATEWAY_ADDRESS_MASK)
-    {
-        state = JOINED;
+    //Here we will set the random seed to the node its own address
+    //analogRead(A0) can also be used. Interesting to find out if it is better
+    unsigned long seed = myAddr[0] << 8 + myAddr[1];
 
-        //Gateway has the cost of 0
-        hopsToGateway = 0;
-    }
-    else
-    {
-        state = INIT;
-
-        //Uninitilized gateway cost
-        hopsToGateway = -1;
-    }
+    randomSeed(seed);
 }
 
 ForwardEngine::~ForwardEngine()
 {
-    ChildNode* iter = childrenList;
-    while(iter != nullptr){
-        ChildNode* temp = iter;
+    //TODO: need to do some clean up here
+
+    ChildNode *iter = childrenList;
+    while (iter != nullptr)
+    {
+        ChildNode *temp = iter;
 
         iter = temp->next;
         delete temp;
     }
 }
 
-void ForwardEngine::setAddr(address addr)
+void ForwardEngine::setAddr(byte *addr)
 {
-    this->myAddr = addr;
+    memcpy(myAddr, addr, 2);
 }
 
-address ForwardEngine::getMyAddr()
+byte *ForwardEngine::getMyAddr()
 {
     return this->myAddr;
 }
 
-address ForwardEngine::getParentAddr()
+byte *ForwardEngine::getParentAddr()
 {
     return this->myParent.parentAddr;
+}
+
+void ForwardEngine::setGatewayReqTime(unsigned long gatewayReqTime)
+{
+    this->gatewayReqTime = gatewayReqTime;
+}
+
+unsigned long ForwardEngine::getGatewayReqTime()
+{
+    return this->gatewayReqTime;
+}
+
+void ForwardEngine::onReceiveRequest(void (*callback)(byte **, byte *))
+{
+    this->onRecvRequest = callback;
+}
+void ForwardEngine::onReceiveResponse(void (*callback)(byte *, byte))
+{
+    this->onRecvResponse = callback;
 }
 
 /**
@@ -82,13 +91,19 @@ bool ForwardEngine::join()
 
     ParentInfo bestParentCandidate = myParent;
 
-    Join beacon(myAddr);
+    //Serial.print("myAddr = 0x");
+    //Serial.print(myAddr[0], HEX);
+    //Serial.println(myAddr[1], HEX);
+    Join beacon(myAddr, BROADCAST_ADDR);
 
     //Send out the beacon once to discover nearby nodes
     beacon.send(myDriver, BROADCAST_ADDR);
 
     //Give some time for the transimission and replying
-    sleepForMillis(500);
+    //sleepForMillis(500);
+
+    //Serial.print("Wait for reply: timeout = ");
+    //Serial.println(DISCOVERY_TIMEOUT);
 
     unsigned long previousTime = getTimeMillis();
 
@@ -101,7 +116,7 @@ bool ForwardEngine::join()
      * It is possible that the node did not receive any above messages at all. In this case, the
      * loop will timeout after a period of DISCOVERY_TIMEOUT. 
      */
-    while (getTimeMillis() - previousTime < DISCOVERY_TIMEOUT)
+    while ((unsigned long)(getTimeMillis() - previousTime) < DISCOVERY_TIMEOUT)
     {
 
         //Now try to receive the message
@@ -114,92 +129,109 @@ bool ForwardEngine::join()
             continue;
         }
 
-        address nodeAddr = msg->srcAddr;
-
+        byte *nodeAddr = msg->srcAddr;
+        // Serial.print("Received msg type = ");
+        Serial.println(msg->type);
         switch (msg->type)
         {
         case MESSAGE_JOIN_ACK:
-
-            Serial.print("MESSAGE_JOIN_ACK: src=0x");
-            Serial.println(nodeAddr, HEX);
+        {
+            Serial.print(F("MESSAGE_JOIN_ACK: src=0x"));
+            Serial.print(nodeAddr[0], HEX);
+            Serial.print(nodeAddr[1], HEX);
+            Serial.print(" rssi=");
+            Serial.println(msg->rssi, DEC);
 
             //If it receives an ACK sent by a potential parent, compare with the current parent candidate
-            int newHopsToGateway = ((JoinAck *)msg)->hopsToGateway;
+            byte newHopsToGateway = ((JoinAck *)msg)->hopsToGateway;
 
-            //Need to find another way to get the RSSI value
-            uint8_t newRssi = myDriver->getLastMessageRssi();
-
-            if (newHopsToGateway != -1)
+            if (newHopsToGateway != 255)
             {
                 //The remote node has a connection to the gateway
-                if (bestParentCandidate.hopsToGateway != -1)
+                if (bestParentCandidate.hopsToGateway != 255)
                 {
                     //Case 1: Both the current parent candidate and new node are connected to the gateway
                     //Choose the candidate with the minimum hops to the gateway while the RSSI is over the threshold
                     //Note that the RSSI value returned here is positive, thus the smaller RSSI is better.
 
-                    if (newRssi <= RSSI_THRESHOLD && newHopsToGateway < bestParentCandidate.hopsToGateway)
+                    if (msg->rssi >= RSSI_THRESHOLD && newHopsToGateway < bestParentCandidate.hopsToGateway)
                     {
-                        bestParentCandidate.parentAddr = nodeAddr;
+                        memcpy(bestParentCandidate.parentAddr, nodeAddr, 2);
                         bestParentCandidate.hopsToGateway = newHopsToGateway;
-                        bestParentCandidate.Rssi = newRssi;
-                        bestParentCandidate.lastAliveTime = getTimeMillis();
+                        bestParentCandidate.Rssi = msg->rssi;
+
+                        Serial.println(F("This is a better parent (closer to gateway)"));
                     }
                 }
                 else
                 {
                     //Case 2: Only the new node is connected to the gateway
                     //We always favor the candidate with a connection to the gateway
-                    bestParentCandidate.parentAddr = nodeAddr;
+                    memcpy(bestParentCandidate.parentAddr, nodeAddr, 2);
                     bestParentCandidate.hopsToGateway = newHopsToGateway;
-                    bestParentCandidate.Rssi = newRssi;
-                    bestParentCandidate.lastAliveTime = getTimeMillis();
+                    bestParentCandidate.Rssi = msg->rssi;
+                    Serial.println(F("This is the first new parent"));
                 }
+            }
+            else
+            {
+                Serial.println(F("The node does not have a path to gateway. Discard"));
             }
             //This case is currently ignored
             /*
-            else if (bestParentCandidate.hopsToGateway == -1){
-                //Case 3: Both the current and new parent candidates does not have a connection to the gateway
-                //Compare the node address. The smaller node address should be the parent (gateway address is always larger than regular node address)
-                if(nodeAddr < bestParentCandidate.parentAddr){
-                    bestParentCandidate.parentAddr = nodeAddr;
-                    bestParentCandidate.hopsToGateway = newHopsToGateway;
-                    bestParentCandidate.Rssi = newRssi;
+                else if (bestParentCandidate.hopsToGateway == -1){
+                    //Case 3: Both the current and new parent candidates does not have a connection to the gateway
+                    //Compare the node address. The smaller node address should be the parent (gateway address is always larger than regular node address)
+                    if(nodeAddr < bestParentCandidate.parentAddr){
+                        bestParentCandidate.parentAddr = nodeAddr;
+                        bestParentCandidate.hopsToGateway = newHopsToGateway;
+                        bestParentCandidate.Rssi = newRssi;
+                    }
                 }
-            }
-            */
+                */
 
             //Other cases involve: new node -> not connected to gateway, current best parent -> connected to the gateway
             //In this case we will not update the best parent candidate
             break;
-
+        }
         default:
-            Serial.print("MESSAGE: type=");
-            Serial.print(msg->type, HEX);
-            Serial.print(" src=0x");
-            Serial.println(nodeAddr, HEX);
+            //Serial.print("MESSAGE: type=");
+            //Serial.print(msg->type, HEX);
+            //Serial.print(" src=0x");
+            //Serial.println(nodeAddr, HEX);
             break;
         }
+
+        delete msg;
     }
 
     Serial.println("Discovery timeout");
 
-    if (bestParentCandidate.parentAddr != myAddr)
+    if (bestParentCandidate.parentAddr[0] != myAddr[0] || bestParentCandidate.parentAddr[1] != myAddr[1])
     {
+        //New parent has found
+        Serial.print(F("bestParentCandidate.parentAddr = 0x"));
+        Serial.print(bestParentCandidate.parentAddr[0], HEX);
+        Serial.println(bestParentCandidate.parentAddr[1], HEX);
 
         myParent = bestParentCandidate;
-        hopsToGateway = bestParentCandidate.hopsToGateway + 1;
 
-        Serial.print("Found the best parent other than myself. Parent Addr = ");
-        Serial.print(myParent.parentAddr, HEX);
+        hopsToGateway = bestParentCandidate.hopsToGateway + 0b1;
 
-        Serial.print(" HopsToGateway = ");
+        Serial.print(F(" HopsToGateway = "));
         Serial.println(hopsToGateway);
 
-        Serial.println("Send JoinCFM to parent");
+        Serial.println(F("Send JoinCFM to parent"));
         //Send a confirmation to the parent node
-        JoinCFM cfm(myAddr, numChildren);
+        JoinCFM cfm(myAddr, myParent.parentAddr, numChildren);
+
         cfm.send(myDriver, myParent.parentAddr);
+
+        //Assign the alive timestamp to the parent
+        myParent.lastAliveTime = getTimeMillis();
+
+        myParent.requireChecking = false;
+
         return true;
     }
     else
@@ -210,25 +242,45 @@ bool ForwardEngine::join()
 
 bool ForwardEngine::run()
 {
-    //If it is a regular node, it needs to join the network to operate
-    while (state == INIT)
+
+    //If the node is a gateway, it does not have to join the network to operate
+    //Gateway is distinguished by the highest bit = 1
+    if (myAddr[0] & GATEWAY_ADDRESS_MASK)
     {
-        if (join())
+        state = JOINED;
+
+        //Gateway has the cost of 0
+        hopsToGateway = 0;
+    }
+    else
+    {
+        state = INIT;
+
+        //Uninitilized gateway cost
+        hopsToGateway = 255;
+
+        //If it is a regular node, it needs to join the network to operate
+        while (state == INIT)
         {
-            state = JOINED;
-        }
-        else
-        {
-            Serial.println("Joining unsuccessful. Retry joining in 5 seconds");
-            sleepForMillis(5000);
+            if (join())
+            {
+                state = JOINED;
+            }
+            else
+            {
+                Serial.println(F("Joining unsuccessful. Retry joining in 5 seconds"));
+                sleepForMillis(5000);
+            }
         }
     }
 
-    Serial.println("Joining successful");
+    Serial.println(F("Joining successful"));
 
+    //bool checkingParent = false;
+    unsigned long checkingStartTime = 0;
 
-    bool checkingParent = false;
-    unsigned long prevAliveCheckTime = getTimeMillis();
+    // the request time starts when Gateway is up
+    lastReqTime = getTimeMillis();
 
     GenericMessage *msg = nullptr;
 
@@ -240,81 +292,245 @@ bool ForwardEngine::run()
         if (msg != nullptr)
         {
 
-            address nodeAddr = msg->srcAddr;
+            byte *nodeAddr = msg->srcAddr;
 
-            //Based on the receved message, do the corresponding actions
+            //Based on the received message, do the corresponding actions
             switch (msg->type)
             {
             case MESSAGE_JOIN:
+            {
                 //TODO: May need a limit for number of children
 
-                JoinAck ack(myAddr, hopsToGateway);
+                JoinAck ack(myAddr, nodeAddr, hopsToGateway);
+
+                // Introduce some random time backoff to prevent collision
+                // From our experiments, we noticed packet losses when multiple nodes send joinACK instantly
+                // upon receiving a join message. This cause some packets to go missing (Even LBT in EBYTE can
+                // not help since the sending happened at almost the same time)
+
+                long backoff = random(MIN_BACKOFF_TIME, MAX_BACKOFF_TIME);
+
+                Serial.print(F("Sleep for some time before sending JoinAck: "));
+                Serial.println(backoff);
+
+                sleepForMillis(backoff);
+
                 ack.send(myDriver, nodeAddr);
 
-                Serial.print("MESSAGE_JOIN: src=0x");
-                Serial.println(nodeAddr, HEX);
+                Serial.print(F("MESSAGE_JOIN: src=0x"));
+                Serial.print(nodeAddr[0], HEX);
+                Serial.println(nodeAddr[1], HEX);
 
                 break;
-
+            }
             case MESSAGE_JOIN_CFM:
+            {
+                //TODO: The current link list might not be necessary. Need to implement this
                 //Add the new child to the linked list (Insert in the beginning of the linked list)
 
-                ChildNode* node = new ChildNode();
-                node->nodeAddr = msg->srcAddr;
+                ChildNode *node = new ChildNode();
+                node->nodeAddr[0] = msg->srcAddr[0];
+                node->nodeAddr[1] = msg->srcAddr[1];
+
                 node->next = childrenList;
 
                 childrenList = node;
+
                 numChildren++;
 
-                Serial.print("A new child has joined: 0x");
-                Serial.println(nodeAddr, HEX);
+                Serial.print("\nA new child has joined: 0x");
+                Serial.print(nodeAddr[0], HEX);
+                Serial.println(nodeAddr[1], HEX);
                 break;
-
+            }
             case MESSAGE_REPLY_ALIVE:
+            {
                 //We do not need to check the message src address here since the parent should
                 //only unicast the reply message (Driver does the filtering).
-
+                Serial.println(F("ReplyAlive from parent"));
                 //If we have previously issued a checkAlive message
-                if(checkingParent){
+                if (myParent.requireChecking)
+                {
                     //The parent node is proven to be alive
-                    checkingParent = false;
+                    myParent.requireChecking = false;
 
                     //Update the last time we confirmed when the parent node was alive
                     myParent.lastAliveTime = getTimeMillis();
                 }
                 break;
             }
+            case MESSAGE_CHECK_ALIVE:
+            {
+                //Parent replies back to the child node
+                Serial.println("I got checked by my child node");
+                ReplyAlive reply(myAddr, nodeAddr);
+                reply.send(myDriver, nodeAddr);
+                break;
+            }
+            case MESSAGE_GATEWAY_REQ:
+            {
+                //This shouldn't happen, but in case gateway should ignore this message
+                if (myAddr[0] & GATEWAY_ADDRESS_MASK)
+                {
+                    break;
+                }
+                else
+                {
+                    // we know our parent is alive
+                    myParent.requireChecking = false;
+                    myParent.lastAliveTime = getTimeMillis();
+
+                    // backoff to avoid collision
+                    long backoff = random(MIN_BACKOFF_TIME, MAX_BACKOFF_TIME);
+                    Serial.print(F("Sleep for some time before forwarding: "));
+                    Serial.println(backoff);
+                    sleepForMillis(backoff);
+
+                    //A node forwards the req to its children and send back the reply with its data
+                    ChildNode *iter = childrenList;
+                    while (iter)
+                    {
+                        GatewayRequest gwReq(myAddr, iter->nodeAddr, ((GatewayRequest *)msg)->seqNum);
+                        gwReq.send(myDriver, iter->nodeAddr);
+                        iter = iter->next;
+                    }
+
+                    // Use callback to get node data
+                    byte *nodeData = new byte[64]; //magic number 64 comes from MP comment
+                    byte dataLength;
+                    if (onRecvRequest)
+                        onRecvRequest(&nodeData, &dataLength);
+
+                    // send reply to its parent
+                    NodeReply nReply(myAddr, myParent.parentAddr, ((GatewayRequest *)msg)->seqNum, dataLength, nodeData);
+
+                    delete[] nodeData;
+
+
+                    nReply.send(myDriver, myParent.parentAddr);
+                }
+                break;
+            }
+            case MESSAGE_NODE_REPLY:
+            {
+                // Gateway should handle this
+                if (myAddr[0] & GATEWAY_ADDRESS_MASK)
+                {
+                    // Should be what gateway is waiting for
+                    if (((NodeReply *)msg)->seqNum != seqNum)
+                    {
+                        Serial.print("Gateway got wrong seqNum: ");
+                        Serial.print(((NodeReply *)msg)->seqNum);
+                        Serial.print("  It should be: ");
+                        Serial.println(seqNum);
+                        break;
+                    }
+
+                    // Gateway should use a callback to process the data
+                    Serial.print("Node Reply Sequence number: ");
+                    Serial.println(((NodeReply *)msg)->seqNum);
+                    if (onRecvResponse)
+                        onRecvResponse(((NodeReply *)msg)->data, ((NodeReply *)msg)->dataLength);
+                    // Serial.print("Content: ");
+                    // for (int i = 0; i < ((NodeReply *)msg)->dataLength; i++)
+                    // {
+                    //     Serial.print("0x");
+                    //     Serial.print(((NodeReply *)msg)->data[i], HEX);
+                    //     Serial.print(" ");
+                    // }
+                }
+                // Node should forward this up to its parent
+                else
+                {
+                    NodeReply nReply(msg->srcAddr, myParent.parentAddr, ((NodeReply *)msg)->seqNum, ((NodeReply *)msg)->dataLength, ((NodeReply *)msg)->data);
+
+                    // backoff to avoid collision
+                    long backoff = random(MIN_BACKOFF_TIME, MAX_BACKOFF_TIME);
+                    Serial.print(F("Sleep for some time before forwarding: "));
+                    Serial.println(backoff);
+                    sleepForMillis(backoff);
+
+                    nReply.send(myDriver, myParent.parentAddr);
+                }
+                break;
+            }
+            }
+
+            delete msg;
+        }
+        // else
+        // {
+        //     Serial.println(F("No message has been received"));
+        // }
+        //Serial.print(F("Free Memory= "));
+        //Serial.println(freeMemory());
+
+        //The gateway does not need to check its parent
+        if (myAddr[0] & GATEWAY_ADDRESS_MASK)
+        {
+            // prepare to send out request
+            if (gatewayReqTime == 0)
+            {
+                Serial.println("Gateway reqtime is 0 (not set)");
+                continue;
+            }
+            if (getTimeMillis() - lastReqTime >= gatewayReqTime)
+            {
+                // request data from all children
+                seqNum += 1;
+                lastReqTime = getTimeMillis();
+
+                Serial.print("Now Gateway sends out request: ");
+                Serial.print("SeqNum = ");
+                Serial.println(seqNum);
+
+                ChildNode *iter = childrenList;
+                while (iter)
+                {
+                    GatewayRequest gwReq(myAddr, iter->nodeAddr, seqNum);
+                    gwReq.send(myDriver, iter->nodeAddr);
+                    iter = iter->next;
+                }
+            }
+
+            continue;
         }
 
-        //If we are not current waiting for MESSAGE_REPLY_ALIVE from the parent
-        if (!checkingParent)
+        unsigned long currentTime = getTimeMillis();
+
+        //The parent is currently being checked (CheckAlive Message has been sent already), but the reply has not been received yet
+        if (myParent.requireChecking)
         {
-            if (getTimeMillis() - myParent.lastAliveTime > checkAliveInterval)
+            //If the reply has not been received in 10 seonds
+            if (currentTime - checkingStartTime >= CHECK_ALIVE_TIMEOUT)
             {
-                //We should now check if the parent is alive
-
-                //Send out the checkAlive message to the parent
-                CheckAlive checkMsg(myAddr, 0);
-                checkMsg.send(myDriver, myParent.parentAddr);
-
-                checkingParent = true;
-                prevAliveCheckTime = getTimeMillis();
-            }
-        }else{
-            //If we are still waiting for MESSAGE_REPLY_ALIVE from the parent
-            //We should check if the waiting is timed out, i.e. the parent will be treated as dead if it does not reply in time.
-
-            if(getTimeMillis() - prevAliveCheckTime > CHECK_ALIVE_TIMEOUT){
-
-                //Redundant if checkingParent is a local variable
-                checkingParent = false;
-                
                 state = INIT;
-                
-                return 1;
+                Serial.println(F("CheckAlive Timeout"));
+                //loop will break
             }
+        }
+        //If the parent is not being checked and has not been checked in the past 30 seconds, we might need to check the parent liveness
+        else if ((unsigned long)(currentTime - myParent.lastAliveTime) >= checkAliveInterval)
+        {
+            Serial.println(F("Time to check parent"));
+            myParent.requireChecking = true;
+            //Send out the checkAlive message to the parent
+            CheckAlive checkMsg(myAddr, myParent.parentAddr, 0);
+            checkMsg.send(myDriver, myParent.parentAddr);
+
+            //record the current time
+            checkingStartTime = getTimeMillis();
+
+            Serial.print(F("Checking start at "));
+            Serial.println(checkingStartTime);
         }
     }
+
+    //We have disconnected from the parent
+    myParent.parentAddr[0] = myAddr[0];
+    myParent.parentAddr[1] = myAddr[1];
+    myParent.hopsToGateway = 255;
+    //myParent.lastAliveTime = getTimeMillis();
 
     return 1;
 }

@@ -2,7 +2,7 @@
 
 #define DEBUG 1
 
-EbyteDeviceDriver::EbyteDeviceDriver(uint8_t rx, uint8_t tx, uint8_t m0, uint8_t m1, uint8_t aux_pin, address addr, 
+EbyteDeviceDriver::EbyteDeviceDriver(uint8_t rx, uint8_t tx, uint8_t m0, uint8_t m1, uint8_t aux_pin, byte* addr, 
                                     uint8_t channel) : DeviceDriver(){
     this->rx = rx;
     this->tx = tx;
@@ -39,7 +39,13 @@ bool EbyteDeviceDriver::init(){
     setAddress(myAddr);
     setChannel(myChannel);
     setNetId(0x00);
-    setOthers(0x40);
+
+    //6th Byte: 0101 0000
+    //Fixed-Point tranmission: enabled
+    //Listen-before-talk: enabled
+    setOthers(0x50);
+
+
     setEnableRSSI();
 
     enterTransMode();
@@ -54,17 +60,40 @@ bool EbyteDeviceDriver::init(){
  * enables hardware address filtering in the Ebyte transceiver. Also broadcast can easily be done by
  * setting dest address to FFFF;
  */ 
-int EbyteDeviceDriver::send(address destAddr, char* msg, long msgLen){
-    char data[3 + msgLen];
-    data[0] = (destAddr >> 8) & 0xFF;
-    data[1] = destAddr & 0xFF;
-    data[2] = (char)myChannel;
-    strncpy(data + 3, msg, msgLen);
-    return (module->write(data, sizeof(data)));
+int EbyteDeviceDriver::send(byte* destAddr, byte* msg, long msgLen){
+
+    long totalLen = 3 + msgLen;
+
+    byte* data = new byte[totalLen];
+    memcpy(data, destAddr, 2);
+    data[2] = (byte)myChannel;
+    
+    memcpy(data + 3, msg, msgLen);
+    // Serial.print(F("Messsage to be sent 0x"));
+
+    // for(int i = 0; i < totalLen; i++){
+    //     Serial.print(data[i], HEX);
+    //     Serial.print(" ");
+    // }
+    // Serial.print("\n");
+    
+    int bytesSent = module->write(data, totalLen);
+
+    //Wait for the message written to the Ebyte chip (50ms >= 50/1200)
+    delay(50);
+
+    //Wait till Ebyte has transmitted the message
+    while (digitalRead(this->aux_pin) != HIGH)
+    {
+    }
+
+    delete data;
+
+    return bytesSent;
 }
 
 
-char EbyteDeviceDriver::recv(){
+byte EbyteDeviceDriver::recv(){
    if(module->available()){
        return (module->read());
    }
@@ -72,7 +101,9 @@ char EbyteDeviceDriver::recv(){
        return -1;
    }
 }
-
+int EbyteDeviceDriver::available(){
+    return module->available();
+}
 int EbyteDeviceDriver::getLastMessageRssi(){
 
     // retrieve rssi from register
@@ -164,21 +195,21 @@ uint8_t EbyteDeviceDriver::getCurrentMode()
 }
 
 /*-----------LoRa Configuration-----------*/
-void EbyteDeviceDriver::setAddress(address addr)
+void EbyteDeviceDriver::setAddress(byte* addr)
 {
     module->write(0xC0);
-    module->write((char)0x00);
+    module->write((byte)0x00);
     module->write(0x02);
-    module->write((addr >> 8) & 0xFF);
-    module->write(addr & 0xFF);
+    module->write(addr, 2);
 
     //Block and read the reply to clear the buffer
     receiveConfigReply(5);
     
     if(DEBUG){
-        Serial.print("Successfully set Address to ");
-        Serial.print(addr);
-        Serial.print("\n");
+        Serial.print("Successfully set Address to 0x");
+        Serial.print(addr[0], HEX);
+        Serial.print(addr[1], HEX);
+        Serial.print("\n");   
     }
 }
 

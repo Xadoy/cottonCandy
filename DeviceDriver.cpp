@@ -12,12 +12,12 @@ bool DeviceDriver::init(){
     return true;
 }
 
-int DeviceDriver::send(address destAddr, char* msg, long msgLen){
+int DeviceDriver::send(byte* destAddr, byte* msg, long msgLen){
     Serial.println("Send not implemented in this dummy driver");
     return -1;
 }
 
-char DeviceDriver::recv(){
+byte DeviceDriver::recv(){
     Serial.println("Recv not implemented in this dummy driver");
     return -1;
 }

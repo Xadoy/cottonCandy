@@ -12,17 +12,17 @@
 #define CREATE 3
 #define JOINED 4
 
-/* Setting the first bit of the address to 0 indicates a gateways */
-#define GATEWAY_ADDRESS_MASK 0x8000
+/* Setting the first bit of the address to 1 indicates a gateways */
+#define GATEWAY_ADDRESS_MASK 0x80
 
 /* The default time for discovery is 10 seconds */
 #define DISCOVERY_TIMEOUT 10000
 
-/* The default timeout value for receiving a message is 5 seconds */
-#define RECEIVE_TIMEOUT 5000
+/* The default timeout value for receiving a message is 1 seconds */
+#define RECEIVE_TIMEOUT 1000
 
 /* The RSSI threshold for choosing a parent node */
-#define RSSI_THRESHOLD 60
+#define RSSI_THRESHOLD -70
 
 /* The maximum number of children a node can have */
 #define MAX_NUM_CHILDREN 5
@@ -33,16 +33,23 @@
 /* The default time interval for checking if the parent is alive */
 #define CHECK_ALIVE_TIMEOUT 10000
 
+/* The minimum backoff time when the node reply back */
+#define MIN_BACKOFF_TIME 100
+
+/* The maximum backoff time when the node reply back */
+#define MAX_BACKOFF_TIME 3000
+
 struct ParentInfo{
     unsigned long lastAliveTime;
-    int hopsToGateway;
+    byte hopsToGateway;
     
-    address parentAddr;
-    uint8_t Rssi;  
+    byte parentAddr[2];
+    int Rssi;  
+    bool requireChecking;
 };
 
 struct ChildNode{
-    address nodeAddr;
+    byte nodeAddr[2];
 
     ChildNode* next;
 };
@@ -50,11 +57,6 @@ struct ChildNode{
 class ForwardEngine{
 
 public:
-    /**
-     * Default Constructor
-     */
-    ForwardEngine();
-
     /**
      * Copy constructor
      */
@@ -69,7 +71,7 @@ public:
      * Constructor. Requires driver and assigned addr
      * TODO: Add the function pointer for callback
      */
-    ForwardEngine(address addr, DeviceDriver* driver);
+    ForwardEngine(byte* addr, DeviceDriver* driver);
 
     /**
      * Try to join an existing network by finding a parent. Return true if successfully joined an 
@@ -93,23 +95,31 @@ public:
 
 
     //Setter for the node address
-    void setAddr(address addr);
+    void setAddr(byte* addr);
 
     /**
      * Getter for the node address
      */
-    address getMyAddr();
+    byte* getMyAddr();
 
     /**
      * Getter for the parent address
      */
-    address getParentAddr();
+    byte* getParentAddr();
+
+    void setGatewayReqTime(unsigned long gatewayReqTime);
+
+    unsigned long getGatewayReqTime();
+
+    void onReceiveRequest(void(*callback)(byte**, byte*));
+    void onReceiveResponse(void(*callback)(byte*, byte));
+
 
 private:
     /**
      * Node address
      */
-    address myAddr;
+    byte myAddr[2];
 
     /**
      * DeviceDriver driver;
@@ -124,7 +134,7 @@ private:
     /**
      * Hops to the gateway
      */ 
-    int hopsToGateway; 
+    byte hopsToGateway; 
 
     /**
      * Current State
@@ -141,7 +151,35 @@ private:
      */
     ChildNode* childrenList;
 
-    unsigned long checkAliveInterval;
+    unsigned long checkAliveInterval = 300000;
+
+    /**
+     * Time interval for gateway to request data from nodes
+     */
+    unsigned long gatewayReqTime = 0; 
+
+    /**
+     * The last time that gateway sends out a request
+     */
+    unsigned long lastReqTime;
+
+    /**
+     * Sequence Number used to identify each Gateway Request
+     */ 
+    uint8_t seqNum = 0;
+
+    /**
+     * callback function pointer when Node receives Gateway Requests
+     * arguments are to pass back msg and num of bytes
+     */ 
+    void (*onRecvRequest)(byte**, byte*);
+
+    /**
+     * callback function pointer when Gateway receives responses from Nodes
+     * argument is msg and num of bytes
+     */ 
+    void (*onRecvResponse)(byte*, byte);
+
 
 };
 
