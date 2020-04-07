@@ -39,27 +39,28 @@ void onReceive(int packetSize) {
     }
     byte add0 = LoRa.read();
     byte add1 = LoRa.read();
-    if (adafruitAddr[0] & add0 != adafruitAddr[0] ||
-        adafruitAddr[1] & add1 != adafruitAddr[1] ) {
-        Serial.println("Addr unmatched, packet is dropped");
+
+    if ((adafruitAddr[0] != add0 ||
+        adafruitAddr[1] != add1) && !(add0 == 0xFF && add1 == 0xFF)) {
+        // Serial.println("Addr unmatched, packet is dropped");
         return;
     }
-    Serial.print("onReceive to queue, size: ");
-    Serial.println(packetSize);
-    Serial.print("Before, queue size: ");
-    Serial.println(queueSize);
+    // Serial.print("onReceive to queue, size: ");
+    // Serial.println(packetSize);
+    // Serial.print("Before, queue size: ");
+    // Serial.println(queueSize);
     while(LoRa.available()) {
         byte result = LoRa.read();
-        Serial.print("0x");
-        Serial.print(result,HEX);
-        Serial.print(" ");
+        // Serial.print("0x");
+        // Serial.print(result,HEX);
+        // Serial.print(" ");
         queueSize++;
         msgQueue[queueTail] = result;
         queueTail = (queueTail + 1) % MSG_QUEUE_CAPACITY;
     }
-    Serial.println("");
-    Serial.print("After, queue end: ");
-    Serial.println(queueSize);
+//     Serial.println("");
+//     Serial.print("After, queue end: ");
+//     Serial.println(queueSize);
 }
 bool AdafruitDeviceDriver::init(){
 
@@ -92,13 +93,13 @@ int AdafruitDeviceDriver::send(byte* destAddr, byte* msg, long msgLen){
     // }
     // Serial.print("\n");
     // return (module->write(data, sizeof(data)));
-    Serial.print("bytes to send: ");
-    for(int i = 0; i < msgLen + 2; i++){
-        Serial.print("0x");
-        Serial.print(data[i], HEX);
-        Serial.print(" ");
-    }
-    Serial.println("");
+    // Serial.print("bytes to send: ");
+    // for(int i = 0; i < msgLen + 2; i++){
+    //     Serial.print("0x");
+    //     Serial.print(data[i], HEX);
+    //     Serial.print(" ");
+    // }
+    // Serial.println("");
     // if (module->send(msg, (uint8_t)msgLen)) {
     //     Serial.println("msg sent");
     //     module->waitPacketSent();
