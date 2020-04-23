@@ -49,7 +49,10 @@ For example, the Arduino program can look like this:
 DeviceDriver* myDriver;
 
 //Node address is 2-byte long
-byte myAddr[2] = {0x00, 0x01}
+//Gateway Node ONLY: First bit in the address is set to 1
+//Non-gateway Nodes: First bit in the address is set to 0
+//Here, we are creating a gateway node
+byte myAddr[2] = {0x80, 0x01}
 
 //Construct the Device Driver for EByte hardware
 myDriver = new EbyteDeviceDriver(LORA_RX, LORA_TX, LORA_M0, LORA_M1, LORA_AUX, myAddr, 0x09);
