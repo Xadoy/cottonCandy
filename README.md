@@ -27,7 +27,9 @@ To build mesh networks with cottonCandy, you need to provide an implementation t
 #### Adafruit and EByte Hardware
 CottonCandy has prepared implementations of `Device Driver` for both Adafruit Feather 32u4 and EByte E22. Please feel free to change those driver implementations to suit your own needs.
 
-**Note:** The implementation for Adafruit Feather 32u4 requires the open-source library ["arduino-LoRa"](https://www.github.com/sandeepmistry/arduino-LoRa) from Sandeep Mistry. You can follow the installation guide on its Github page.
+**Note:** 
+* The implementation for EByte test boards uses SoftwareSerial. The default RX and TX size in SoftwareSerial is 64 Bytes. We recommend you to increase the size for large networks, by changing `_SS_MAX_RX_BUFF` and `_SS_MAX_TX_BUFF` in the SoftwareSerial header file.
+* The implementation for Adafruit Feather 32u4 requires the open-source library ["arduino-LoRa"](https://www.github.com/sandeepmistry/arduino-LoRa) from Sandeep Mistry. You can follow the installation guide on its Github page.
 
 #### Other Hardware
 For other brands of LoRa transceivers, you need to provide your own implementation of the hardware driver
