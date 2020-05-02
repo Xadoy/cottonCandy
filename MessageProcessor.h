@@ -16,11 +16,16 @@
 #define MSG_LEN_JOIN_CFM          6
 #define MSG_LEN_CHECK_ALIVE       6
 #define MSG_LEN_REPLY_ALIVE       5
-#define MSG_LEN_GATEWAY_REQ       6
+#define MSG_LEN_GATEWAY_REQ       10
 #define MSG_LEN_HEADER_NODE_REPLY 7
 
 
 #include "DeviceDriver.h"
+
+union LongConverter{
+    unsigned long l;
+    byte b[4];
+};
 
 /* We will use polymorphism here */
 
@@ -94,8 +99,9 @@ class GatewayRequest: public GenericMessage
 {
 public:
     byte seqNum;
+    unsigned long nextReqTime;
 
-    GatewayRequest(byte* srcAddr, byte* destAddr, byte seqNum);
+    GatewayRequest(byte* srcAddr, byte* destAddr, byte seqNum, unsigned long nextReqTime);
     int send(DeviceDriver* driver, byte* destAddr);
 };
 

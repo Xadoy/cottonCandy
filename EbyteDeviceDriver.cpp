@@ -69,13 +69,13 @@ int EbyteDeviceDriver::send(byte* destAddr, byte* msg, long msgLen){
     data[2] = (byte)myChannel;
     
     memcpy(data + 3, msg, msgLen);
-    // Serial.print(F("Messsage to be sent 0x"));
+    Serial.print(F("Messsage to be sent 0x"));
 
-    // for(int i = 0; i < totalLen; i++){
-    //     Serial.print(data[i], HEX);
-    //     Serial.print(" ");
-    // }
-    // Serial.print("\n");
+    for(int i = 0; i < totalLen; i++){
+         Serial.print(data[i], HEX);
+        Serial.print(" ");
+     }
+    Serial.print("\n");
     
     int bytesSent = module->write(data, totalLen);
 

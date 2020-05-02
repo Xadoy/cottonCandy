@@ -39,6 +39,22 @@
 /* The maximum backoff time when the node reply back */
 #define MAX_BACKOFF_TIME 3000
 
+/** Default time for waiting for the next GatewayRequest is a day (24 hours = 86,400,000 milliseconds).
+ * If the user do not specify the GatewayReq time during setup,  the node will wait forever for
+ * the next GatewayRequest. If connection is broken before the next GatewayRequest comes in,
+ * the node will not self-heal until a full day is passed
+*/
+#define DEFAULT_NEXT_GATEWAY_REQ_TIME 86400E3
+
+/* Maximum number of missed gateway requests allowed before self-healing */
+#define MAX_NUM_OF_MISSED_GATEWAY_REQ 2
+
+/** Gateway request may arrive later than expected due to transmission and processing delays.
+ * The node marks a missing gateway request if none is received for 
+ *         (NEXT_GATEWAY_REQ_TIME_TOLERANCE_FACTOR * Advertised next request time interval)
+*/
+#define NEXT_GATEWAY_REQ_TIME_TOLERANCE_FACTOR 1.2
+
 struct ParentInfo{
     unsigned long lastAliveTime;
     byte hopsToGateway;
@@ -156,7 +172,7 @@ private:
     /**
      * Time interval for gateway to request data from nodes
      */
-    unsigned long gatewayReqTime = 0; 
+    unsigned long gatewayReqTime = DEFAULT_NEXT_GATEWAY_REQ_TIME; 
 
     /**
      * The last time that gateway sends out a request

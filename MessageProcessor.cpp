@@ -110,9 +110,10 @@ ReplyAlive::ReplyAlive(byte* srcAddr, byte* destAddr) : GenericMessage(MESSAGE_R
 }
 
 /*--------------------GatewayRequest Message-------------------*/
-GatewayRequest::GatewayRequest(byte* srcAddr, byte* destAddr, byte seqNum): GenericMessage(MESSAGE_GATEWAY_REQ, srcAddr, destAddr)
+GatewayRequest::GatewayRequest(byte* srcAddr, byte* destAddr, byte seqNum, unsigned long nextReqTime): GenericMessage(MESSAGE_GATEWAY_REQ, srcAddr, destAddr)
 {
     this->seqNum = seqNum;
+    this->nextReqTime = nextReqTime;
 }
 
 int GatewayRequest::send(DeviceDriver* driver, byte* destAddr)
@@ -125,6 +126,11 @@ int GatewayRequest::send(DeviceDriver* driver, byte* destAddr)
     byte msg[MSG_LEN_GATEWAY_REQ];
     copyTypeAndAddr(msg);
     msg[5] = seqNum;
+
+    union LongConverter converter;
+
+    converter.l = nextReqTime;
+    memcpy(&(msg[6]), converter.b, 4);
 
     return ( driver->send(destAddr, msg, sizeof(msg)) );
 }
@@ -272,9 +278,13 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
             byte destAddr[2];
             memcpy(destAddr, buff + 2, 2);
 
-            byte depth = buff[4];
+            byte seqNum = buff[4];
 
-            msg = new GatewayRequest(srcAddr, destAddr, depth);
+            union LongConverter converter;
+            memcpy(converter.b, buff + 5, 4);
+            unsigned long nextReqTime = converter.l;
+
+            msg = new GatewayRequest(srcAddr, destAddr, seqNum, nextReqTime);
             delete[] buff;
             break;
         }

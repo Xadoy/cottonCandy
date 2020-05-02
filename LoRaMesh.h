@@ -50,11 +50,24 @@ public:
      */
     byte* getParentAddr();
 
+    /**
+     * Setter for the time interval between each GatewayRequest 
+     */
     void setGatewayReqTime(unsigned long gatewayReqTime);
 
+    /**
+     * Getter for the time interval between each GatewayRequest 
+     */ 
     unsigned long getGatewayReqTime();
 
+    /**
+     * Accepts a function as an argument which will be called when a gateway request arrives
+     */
     void onReceiveRequest(void(*callback)(byte**, byte*));
+
+    /**
+     * Accepts a function as an argument which will be called when a node reply arrives
+     */
     void onReceiveResponse(void(*callback)(byte*, byte));
 
 
