@@ -87,7 +87,7 @@ int EbyteDeviceDriver::send(byte* destAddr, byte* msg, long msgLen){
     {
     }
 
-    delete data;
+    delete[] data;
 
     return bytesSent;
 }

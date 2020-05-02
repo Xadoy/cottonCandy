@@ -42,6 +42,8 @@ for them. Implementations of the following functions in `Device Driver` are mand
 
 You can also implement `bool DeviceDriver::init()` in `Device Driver` in case your LoRa transceiver requires some initialization (e.g. Set the frequency).
 
+CottonCandy uses point-to-point communication and broadcast address. Most of the messages are sent using "unicast", as non-recevier nodes simply ignore the message at the driver level and avoid further processing. Some hardware devices like EByte E22 already provides such address filtering in the firmware-level. For other LoRa devices which do not come with address filtering, you need to add the address filtering feature in the implementation of the hardware driver. The easiest way to do so is to insert "destination address" in the beginning of the packet upon sending and process it upon receiving the packet. An example is done in the "AdafruitDeviceDriver" provided.
+
 ### Set up Node
 After constructing the device driver, you can construct a `LoRaMesh` object and start running the device as a network node. 
 
