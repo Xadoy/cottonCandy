@@ -42,7 +42,7 @@ public:
     virtual int send(DeviceDriver* driver, byte* destAddr);
     void copyTypeAndAddr(byte* msg);
 
-    ~GenericMessage();
+    virtual ~GenericMessage();
 };
 
 /*--------------------Join Beacon-------------------*/
