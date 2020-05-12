@@ -46,9 +46,6 @@
 */
 #define DEFAULT_NEXT_GATEWAY_REQ_TIME 86400E3
 
-/* Maximum number of missed gateway requests allowed before self-healing */
-#define MAX_NUM_OF_MISSED_GATEWAY_REQ 2
-
 /** Gateway request may arrive later than expected due to transmission and processing delays.
  * The node marks a missing gateway request if none is received for 
  *         (NEXT_GATEWAY_REQ_TIME_TOLERANCE_FACTOR * Advertised next request time interval)
