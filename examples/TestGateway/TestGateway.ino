@@ -37,9 +37,6 @@ void setup() {
     manager = new LoRaMesh(myAddr,myDriver);
     manager->setGatewayReqTime(61000);
     manager->onReceiveResponse(onReciveResponse);
-    
-    Serial.println("Free memory left: ");
-    Serial.println(freeMemory());
 }
 
 void loop() {

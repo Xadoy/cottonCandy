@@ -41,9 +41,6 @@ void setup() {
     
     manager = new LoRaMesh(myAddr,myDriver);
     manager->onReceiveRequest(onReceiveRequest);
-
-    Serial.println("Free memory left: ");
-    Serial.println(freeMemory());
 }
 
 void loop() {

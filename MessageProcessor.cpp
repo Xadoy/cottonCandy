@@ -334,7 +334,6 @@ byte* readMsgFromBuff(DeviceDriver* driver, uint8_t msgLen)
         //     continue;
         // }        
     }
-    Serial.print("\n");
     return buff;
 }
 

@@ -460,8 +460,6 @@ bool ForwardEngine::run()
         // {
         //     Serial.println(F("No message has been received"));
         // }
-        //Serial.print(F("Free Memory= "));
-        //Serial.println(freeMemory());
 
         //The gateway does not need to check its parent
         if (myAddr[0] & GATEWAY_ADDRESS_MASK)
