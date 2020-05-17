@@ -15,11 +15,12 @@ ForwardEngine::ForwardEngine(byte *addr, DeviceDriver *driver)
     numChildren = 0;
     childrenList = nullptr;
 
-    //Here we will set the random seed to the node its own address
-    //analogRead(A0) can also be used. Interesting to find out if it is better
-    unsigned long seed = myAddr[0] << 8 + myAddr[1];
+    //Here we will set the random seed to analogRead(A0)
+    //The node address can also be used. Interesting to find out if it is better
+    //unsigned long seed = myAddr[0] << 8 + myAddr[1];
 
-    randomSeed(seed);
+    //Note: To obtain an arbitary seed, make sure Pin A0 is not connected to anything
+    randomSeed(analogRead(A0));
 }
 
 ForwardEngine::~ForwardEngine()
@@ -393,6 +394,7 @@ bool ForwardEngine::run()
                 if (msg->srcAddr[0] != myParent.parentAddr[0] || msg->srcAddr[1] != myParent.parentAddr[1])
                 {
                     //If the message does not come from the parent node
+                    Serial.println(F("Req is not received from parent. Ignore."));
                     break;
                 }
 

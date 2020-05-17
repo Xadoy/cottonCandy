@@ -24,21 +24,22 @@ bool EbyteDeviceDriver::init(){
     pinMode(this->m0, OUTPUT);
     pinMode(this->m1, OUTPUT);
     pinMode(this->aux_pin, INPUT);
-    Serial.println("LoRa Module Pins initialized");
+    Serial.println(F("LoRa Module Pins initialized"));
 
     while (digitalRead(this->aux_pin) != HIGH)
     {
-        Serial.println("Waiting for LoRa Module to initialize");
+        Serial.println(F("Waiting for LoRa Module to initialize"));
         delay(10);
     }
 
     module->begin(BAUD_RATE);
-    Serial.println("LoRa Module initialized");
+    Serial.println(F("LoRa Module initialized"));
 
     enterConfigMode();
     setAddress(myAddr);
     setChannel(myChannel);
     setNetId(0x00);
+    setAirRate();
 
     //6th Byte: 0101 0000
     //Fixed-Point tranmission: enabled
@@ -140,7 +141,7 @@ void EbyteDeviceDriver::enterConfigMode()
     while (digitalRead(this->aux_pin) != HIGH)
     {
     }
-    Serial.println("Successfully entered CONFIGURATION mode");
+    Serial.println(F("Successfully entered CONFIGURATION mode"));
     currentMode = Mode::CONFIG;
 }
 
@@ -155,7 +156,7 @@ void EbyteDeviceDriver::enterTransMode()
     while (digitalRead(this->aux_pin) != HIGH)
     {
     }
-    Serial.println("Successfully entered TRANSMISSION mode");
+    Serial.println(F("Successfully entered TRANSMISSION mode"));
     currentMode = Mode::TRANSMIT;
 }
 
@@ -170,7 +171,7 @@ void EbyteDeviceDriver::enterWorMode()
     while (digitalRead(this->aux_pin) != HIGH)
     {
     }
-    Serial.println("Successfully entered WOR mode");
+    Serial.println(F("Successfully entered WOR mode"));
     currentMode = Mode::WOR;
 }
 
@@ -185,7 +186,7 @@ void EbyteDeviceDriver::enterSleepMode()
     while (digitalRead(this->aux_pin) != HIGH)
     {
     }
-    Serial.println("Successfully entered SLEEP mode");
+    Serial.println(F("Successfully entered SLEEP mode"));
     currentMode = Mode::SLEEP;
 }
 
@@ -206,7 +207,7 @@ void EbyteDeviceDriver::setAddress(byte* addr)
     receiveConfigReply(5);
     
     if(DEBUG){
-        Serial.print("Successfully set Address to 0x");
+        Serial.print(F("Successfully set Address to 0x"));
         Serial.print(addr[0], HEX);
         Serial.print(addr[1], HEX);
         Serial.print("\n");   
@@ -224,7 +225,7 @@ void EbyteDeviceDriver::setNetId(uint8_t netId)
     receiveConfigReply(4);
 
     if(DEBUG){
-        Serial.print("Successfully set Net Id to ");
+        Serial.print(F("Successfully set Net Id to "));
         Serial.print(netId);
         Serial.print("\n");
     }
@@ -242,7 +243,7 @@ void EbyteDeviceDriver::setChannel(uint8_t channel)
 
     if(DEBUG){
         //Frequency = 410.125 MHz + channel * 1 MHz
-        Serial.print("Successfully set Channel to ");
+        Serial.print(F("Successfully set Channel to "));
         Serial.print(channel);
         Serial.print("\n");
     }
@@ -258,7 +259,7 @@ void EbyteDeviceDriver::setOthers(byte config)
     //Read the reply to clear the buffer
     receiveConfigReply(4);
     if(DEBUG){
-        Serial.println("Successfully set other configs");
+        Serial.println(F("Successfully set other configs"));
     }
 }
 
@@ -287,6 +288,24 @@ void EbyteDeviceDriver::setEnableRSSI()
   //Read the reply to clear the buffer
   receiveConfigReply(4);
   if(DEBUG){
-    Serial.println("Successfully enable RSSI");
+    Serial.println(F("Successfully enable RSSI"));
   }
+}
+
+void EbyteDeviceDriver::setAirRate(){
+
+    //Set baud rate to 9600
+    //Serial mode = 8N1
+    //Air rate = 9.6kbps
+    module->write(0xC0);
+    module->write(0x03);
+    module->write(0x01);
+    //0x64 = 0b01100100
+    module->write(0x64);
+
+    //Read the reply to clear the buffer
+    receiveConfigReply(4);
+    if(DEBUG){
+        Serial.println(F("Successfully set the air rate"));
+    }
 }

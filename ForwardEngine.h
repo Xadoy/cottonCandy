@@ -37,7 +37,8 @@
 #define MIN_BACKOFF_TIME 100
 
 /* The maximum backoff time when the node reply back */
-#define MAX_BACKOFF_TIME 3000
+// Doubled the time temporarily for testing
+#define MAX_BACKOFF_TIME 6000
 
 /** Default time for waiting for the next GatewayRequest is a day (24 hours = 86,400,000 milliseconds).
  * If the user do not specify the GatewayReq time during setup,  the node will wait forever for

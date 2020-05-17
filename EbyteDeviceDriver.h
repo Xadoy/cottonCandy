@@ -50,6 +50,11 @@ private:
     void setOthers(byte config);
     void setEnableRSSI();
 
+    /**
+     * The function sets the air rate to 9.6kbps by default
+     */ 
+    void setAirRate();
+
     void enterConfigMode();
     void enterTransMode();
     void enterWorMode();
