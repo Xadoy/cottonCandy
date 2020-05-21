@@ -59,7 +59,7 @@ void setup()
   myDriver = new EbyteDeviceDriver(LORA_RX, LORA_TX, LORA_M0, LORA_M1, LORA_AUX, myAddr, 0x09);
 
   // Uncomment the next line for using Adafruit LoRa Feather
-  // myDriver = new AdafruitDeviceDriver(myAddr, 0x09);
+  // myDriver = new AdafruitDeviceDriver(myAddr);
   myDriver->init();
 
   // Create a LoRaMesh object

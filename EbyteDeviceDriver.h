@@ -40,7 +40,7 @@ private:
     uint8_t aux_pin;
     uint8_t currentMode = 0;
 
-    byte* myAddr;
+    byte myAddr[2];
     uint8_t myChannel;
 
     /*-----------Module Registers Configuration-----------*/

@@ -11,7 +11,13 @@ EbyteDeviceDriver::EbyteDeviceDriver(uint8_t rx, uint8_t tx, uint8_t m0, uint8_t
     this->aux_pin = aux_pin;
     module = new SoftwareSerial(rx, tx);
 
-    myAddr = addr;
+    if(sizeof(addr) < 2){
+        Serial.println("Error: Node address must be 2-byte long");
+    }else{
+        myAddr[0] = addr[0];
+        myAddr[1] = addr[1];
+    }
+
     myChannel = channel;
 }
 
