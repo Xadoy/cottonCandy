@@ -1,3 +1,35 @@
+'''    
+    Copyright 2020, Network Research Lab at the University of Toronto.
+
+    This file is part of CottonCandy.
+
+    CottonCandy is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Lesser General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    CottonCandy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public License
+    along with CottonCandy.  If not, see <https://www.gnu.org/licenses/>.
+'''
+
+'''
+This is a utility Python script for monitoring network activities among nearby
+nodes built with Ebyte E22 tranceivers. To use it, an Ebyte E22 device must be 
+first configured to use:
+
+1. The correct channel and air rate.
+2. Transparent mode.
+
+This monitoring device shall be connected to the PC directly via a USB port. 
+The program uses the monitoring device to log the packets sent among nodes,
+and uses networkx to visualize the network topology. 
+'''
+
 import datetime as dt
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
