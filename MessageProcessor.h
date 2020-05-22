@@ -120,7 +120,21 @@ public:
 };
 
 /*
- * Read from device buffer, construct a message and return a pointer to it
+ * Reads from device buffer, constructs a message and returns a pointer to it.
+ * The timeout value will be used for terminating the receiving in the following
+ * 2 scenarios:
+ * 
+ *      1. No valid message has been received
+ *      2. Valid messages are received but are truncated due to collisions or
+ *         other wireless signal corruption. In this case, the program can
+ *         block to read the remaining data. For messages with variable length 
+ *         (i.e. NodeReply). They can be received but the "length" field can be 
+ *         corrupted. Thus, the program might block to read an arbitarily long 
+ *         byte array, which causes the program to hang.
+ * 
+ * Note that the timeout value does not limit the program run-time. The actual run
+ * time might exceed 1 second.
+ * 
  * !! Caller needs to free the memory after using the returned pointer
  */
 GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout);
@@ -130,6 +144,6 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout);
  * Read certain bytes from device buffer
  * !! Caller needs to free the memory after using the returned pointer
  */
-byte* readMsgFromBuff(DeviceDriver* driver, uint8_t msgLen);
+byte* readMsgFromBuff(DeviceDriver* driver, uint8_t msgLen, unsigned long timeout);
 
 #endif

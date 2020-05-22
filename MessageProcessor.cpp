@@ -184,7 +184,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
         case MESSAGE_JOIN:
         {
             // we have already read the msg type
-            byte* buff = readMsgFromBuff(driver, MSG_LEN_JOIN - 1);
+            byte* buff = readMsgFromBuff(driver, MSG_LEN_JOIN - 1, timeout);
 
             // get what we need for Join
             byte srcAddr[2];
@@ -200,7 +200,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
         case MESSAGE_JOIN_ACK:
         {
             // we have already read the msg type
-            byte* buff = readMsgFromBuff(driver, MSG_LEN_JOIN_ACK - 1);
+            byte* buff = readMsgFromBuff(driver, MSG_LEN_JOIN_ACK - 1, timeout);
 
             // get what we need for JoinAck
             byte srcAddr[2];
@@ -218,7 +218,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
         case MESSAGE_JOIN_CFM:
         {
             // we have already read the msg type
-            byte* buff = readMsgFromBuff(driver, MSG_LEN_JOIN_CFM - 1);
+            byte* buff = readMsgFromBuff(driver, MSG_LEN_JOIN_CFM - 1, timeout);
 
             // get what we need for JoinCFM
             byte srcAddr[2];
@@ -236,7 +236,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
         case MESSAGE_CHECK_ALIVE:
         {
             // we have already read the msg type
-            byte* buff = readMsgFromBuff(driver, MSG_LEN_CHECK_ALIVE - 1);
+            byte* buff = readMsgFromBuff(driver, MSG_LEN_CHECK_ALIVE - 1, timeout);
 
             // get what we need for CheckAlive
             byte srcAddr[2];
@@ -254,7 +254,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
         case MESSAGE_REPLY_ALIVE:
         {
             // we have already read the msg type
-            byte* buff = readMsgFromBuff(driver, MSG_LEN_REPLY_ALIVE - 1);
+            byte* buff = readMsgFromBuff(driver, MSG_LEN_REPLY_ALIVE - 1, timeout);
 
             // get what we need for ReplyAlive
             byte srcAddr[2];
@@ -270,7 +270,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
         case MESSAGE_GATEWAY_REQ:
         {
             // we have already read the msg type
-            byte* buff = readMsgFromBuff(driver, MSG_LEN_GATEWAY_REQ - 1);
+            byte* buff = readMsgFromBuff(driver, MSG_LEN_GATEWAY_REQ - 1, timeout);
 
             // get what we need for GatewayRequest
             byte srcAddr[2];
@@ -295,7 +295,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
             // need to know the data length before getting the data
 
             // get Header first
-            byte* headerBuff = readMsgFromBuff(driver, MSG_LEN_HEADER_NODE_REPLY - 1);
+            byte* headerBuff = readMsgFromBuff(driver, MSG_LEN_HEADER_NODE_REPLY - 1, timeout);
             byte srcAddr[2];
             memcpy(srcAddr, headerBuff, 2);
             byte destAddr[2];
@@ -304,7 +304,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
             byte seqNum = headerBuff[4];
             byte dataLength = headerBuff[5];
 
-            byte* data = readMsgFromBuff(driver, dataLength);
+            byte* data = readMsgFromBuff(driver, dataLength, timeout);
 
             msg = new NodeReply(srcAddr, destAddr, seqNum, dataLength, data);
             delete[] data;
@@ -324,13 +324,15 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
 
 
 /*-------------------- Helpers -------------------*/
-byte* readMsgFromBuff(DeviceDriver* driver, uint8_t msgLen)
+byte* readMsgFromBuff(DeviceDriver* driver, uint8_t msgLen, unsigned long timeout)
 {
     byte* buff = new byte[msgLen];
 
     int i = 0;
+
+    unsigned long startTime = getTimeMillis();
     
-    while(i < msgLen)
+    while(i < msgLen && (unsigned long)(getTimeMillis() - startTime) < timeout)
     {
         if(driver->available())
         {

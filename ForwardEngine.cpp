@@ -307,7 +307,7 @@ bool ForwardEngine::run()
                 }
                 else
                 {
-                    //TODO: Remove this block of debug code
+                    /*
                     //DEBUG code for testing: For gateway only accept node 0xA0 and 0xA1
                     if (myAddr[0] & GATEWAY_ADDRESS_MASK)
                     {
@@ -316,6 +316,7 @@ bool ForwardEngine::run()
                             break;
                         }
                     }
+                    */
 
                     //TODO: May need a limit for number of children
 
@@ -553,9 +554,6 @@ bool ForwardEngine::run()
             state = INIT;
             Serial.println(F("No message has been received for the time period"));
         }
-
-        //Serial.print(F("Free Memory= "));
-        //Serial.println(freeMemory());
 
         //Dixin update: we will replace the "Aliveness checking" with the GatewayReq
         /*
