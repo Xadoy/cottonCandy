@@ -117,7 +117,7 @@ def animate(i, ser, file):
             node_list.append(src_addr)
 
 
-        edge_labels[edge] = 'Connected: ' + current_time
+        edge_labels[edge] = 'Last Seen: ' + current_time
 
         node_info[src_addr] = dest_addr
 
@@ -169,6 +169,7 @@ def animate(i, ser, file):
             if edge_labels.get(edge) == None:
                 G.add_edge(src_addr, dest_addr)
 
+        if edge_labels.get(edge) != None:
             edge_labels[edge] = 'Last Seen: ' + current_time
 
         node_info[src_addr] = dest_addr
@@ -183,7 +184,9 @@ def animate(i, ser, file):
 
         seq_num = int.from_bytes(ser.read(1),byteorder='big')
         next_req_time = int.from_bytes(ser.read(4), byteorder='little')
-        print("Next Gateway REQ (" + str(seq_num + 1) + ") in " + str(next_req_time/1000) + " seconds")
+
+        backoff_time = int.from_bytes(ser.read(4), byteorder='little')
+        print("Next Gateway REQ (" + str(seq_num + 1) + ") in " + str(next_req_time) + "ms. Backoff time = " + str(backoff_time) + "ms")
 
     # Update the plot
     plot()
