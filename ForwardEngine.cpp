@@ -318,8 +318,6 @@ bool ForwardEngine::run()
                     }
                     */
 
-                    //TODO: May need a limit for number of children
-
                     JoinAck ack(myAddr, nodeAddr, hopsToGateway);
 
                     // Introduce some random time backoff to prevent collision
@@ -327,7 +325,7 @@ bool ForwardEngine::run()
                     // upon receiving a join message. This cause some packets to go missing (Even LBT in EBYTE can
                     // not help since the sending happened at almost the same time)
 
-                    long backoff = random(MIN_BACKOFF_TIME, MAX_BACKOFF_TIME);
+                    long backoff = random(MIN_BACKOFF_TIME, MAX_JOIN_ACK_BACKOFF_TIME);
 
                     Serial.print(F("Sleep for some time before sending JoinAck: "));
                     Serial.println(backoff);
@@ -357,7 +355,7 @@ bool ForwardEngine::run()
 
                 numChildren++;
 
-                Serial.print("\nA new child has joined: 0x");
+                Serial.print(F("A new child has joined: 0x"));
                 Serial.print(nodeAddr[0], HEX);
                 Serial.println(nodeAddr[1], HEX);
                 break;
@@ -410,14 +408,19 @@ bool ForwardEngine::run()
                     myParent.requireChecking = false;
                     myParent.lastAliveTime = getTimeMillis();
 
+                    maxBackoffTime = ((GatewayRequest *)msg)->childBackoffTime;
+                    Serial.print(F("New maximum backoff time: "));
+                    Serial.println(maxBackoffTime);
+
                     // backoff to avoid collision
-                    unsigned long backoff = random(MIN_BACKOFF_TIME, MAX_BACKOFF_TIME);
+                    unsigned long backoff = random(MIN_BACKOFF_TIME, maxBackoffTime);
                     Serial.print(F("Sleep for some time before replying back: "));
                     Serial.println(backoff);
+                    
                     sleepForMillis(backoff);
 
                     // Use callback to get node data
-                    byte *nodeData = new byte[64]; //magic number 64 comes from MP comment
+                    byte *nodeData = new byte[MAX_LEN_DATA_NODE_REPLY]; //magic number 64 comes from MP comment
                     byte dataLength;
                     if (onRecvRequest)
                         onRecvRequest(&nodeData, &dataLength);
@@ -437,24 +440,24 @@ bool ForwardEngine::run()
                     {
                         // Dixin update: Other children of the parent will finish transmitting after 3 seconds, so it is better to
                         // wait until all of them finished transmitting before forwarding the messages
-                        unsigned long remainingTime = MAX_BACKOFF_TIME - backoff;
-                        backoff = random(remainingTime, remainingTime + MAX_BACKOFF_TIME);
+                        unsigned long remainingTime = maxBackoffTime - backoff;
+                        backoff = random(remainingTime, remainingTime + maxBackoffTime);
                         sleepForMillis(backoff);
 
-                        //Dixin Wu update: what if we simply broadcast the gatewayReq
-                        GatewayRequest gwReq(myAddr, BROADCAST_ADDR, ((GatewayRequest *)msg)->seqNum, gatewayReqTime);
+                        unsigned long childBackoffTime = numChildren * MAX_BACKOFF_TIME_FOR_ONE_CHILD;
+
+                        if (childBackoffTime > gatewayReqTime)
+                        {
+                            childBackoffTime = gatewayReqTime;
+                        }
+
+                        Serial.print(F("Max backoff time for child nodes: "));
+                        Serial.println(childBackoffTime);
+
+                        //Dixin Wu update: We simply broadcast the gatewayReq
+                        GatewayRequest gwReq(myAddr, BROADCAST_ADDR, ((GatewayRequest *)msg)->seqNum, gatewayReqTime, childBackoffTime);
                         gwReq.send(myDriver, BROADCAST_ADDR);
                     }
-                    /*
-                    //A node forwards the req to its children and send back the reply with its data
-                    ChildNode *iter = childrenList;
-                    while (iter)
-                    {
-                        GatewayRequest gwReq(myAddr, iter->nodeAddr, ((GatewayRequest *)msg)->seqNum, gatewayReqTime);
-                        gwReq.send(myDriver, iter->nodeAddr);
-                        iter = iter->next;
-                    }
-                    */
                 }
                 break;
             }
@@ -466,25 +469,17 @@ bool ForwardEngine::run()
                     // Should be what gateway is waiting for
                     if (((NodeReply *)msg)->seqNum != seqNum)
                     {
-                        Serial.print(F("Gateway got wrong seqNum: "));
+                        Serial.print(F("Warning: Gateway got wrong seqNum: "));
                         Serial.print(((NodeReply *)msg)->seqNum);
                         Serial.print(F("  It should be: "));
                         Serial.println(seqNum);
-                        break;
                     }
-                    //Serial.println(freeMemory());
+
                     // Gateway should use a callback to process the data
                     Serial.print(F("Node Reply Sequence number: "));
                     Serial.println(((NodeReply *)msg)->seqNum);
                     if (onRecvResponse)
                         onRecvResponse(((NodeReply *)msg)->data, ((NodeReply *)msg)->dataLength);
-                    // Serial.print("Content: ");
-                    // for (int i = 0; i < ((NodeReply *)msg)->dataLength; i++)
-                    // {
-                    //     Serial.print("0x");
-                    //     Serial.print(((NodeReply *)msg)->data[i], HEX);
-                    //     Serial.print(" ");
-                    // }
                 }
                 // Node should forward this up to its parent
                 else
@@ -493,7 +488,7 @@ bool ForwardEngine::run()
                     NodeReply nReply(msg->srcAddr, myParent.parentAddr, ((NodeReply *)msg)->seqNum, ((NodeReply *)msg)->dataLength, ((NodeReply *)msg)->data);
 
                     // backoff to avoid collision
-                    long backoff = random(MIN_BACKOFF_TIME, MAX_BACKOFF_TIME);
+                    long backoff = random(MIN_BACKOFF_TIME, maxBackoffTime);
                     Serial.print(F("Sleep for some time before forwarding: "));
                     Serial.println(backoff);
                     sleepForMillis(backoff);
@@ -506,10 +501,6 @@ bool ForwardEngine::run()
 
             delete msg;
         }
-        // else
-        // {
-        //     Serial.println(F("No message has been received"));
-        // }
 
         unsigned long currentTime = getTimeMillis();
         //The gateway does not need to check its parent
@@ -529,21 +520,38 @@ bool ForwardEngine::run()
                 seqNum += 1;
                 lastReqTime = currentTime;
 
+                unsigned long childBackoffTime = numChildren * MAX_BACKOFF_TIME_FOR_ONE_CHILD;
+
+                /** If there are many child nodes and the time interval between requests are much
+                 * less than the child backoff time calculated, this can result into asynchronous
+                 * requests and replies (e.g. Replies with seq number 5 arrives after request with
+                 * seq number 10 has been issued)
+                 * 
+                 * Thus, if the child backoff time is greater than the gateway request time interval,
+                 * the backoff time will be at least set to the gateway request time interval. Note
+                 * that the asynchronous replies and requests can still occur as the tree has multiple
+                 * hierarchies, but hopefully it prevents some extreme cases where the calculated
+                 * backoff time is multiple times of the gatewayReqTime.
+                 * 
+                 * In practice, the problem hardly occurs as the gatewayReqTime is usually set to hours
+                 * and there are not so many nodes connected to the gateway. 
+                 */
+                if (childBackoffTime > gatewayReqTime)
+                {
+                    childBackoffTime = gatewayReqTime;
+                }
+
                 Serial.print(F("Now Gateway sends out request: SeqNum="));
-                Serial.println(seqNum);
+                Serial.print(seqNum);
+                Serial.print(F(", Next Request Time="));
+                Serial.print(gatewayReqTime);
+                Serial.print(F(", Child Backoff Time="));
+                Serial.println(childBackoffTime);
 
                 //Dixin Wu update: what if we simply broadcast the gatewayReq
-                GatewayRequest gwReq(myAddr, BROADCAST_ADDR, seqNum, gatewayReqTime);
+                GatewayRequest gwReq(myAddr, BROADCAST_ADDR, seqNum, gatewayReqTime, childBackoffTime);
                 gwReq.send(myDriver, BROADCAST_ADDR);
-                /**
-                ChildNode *iter = childrenList;
-                while (iter)
-                {
-                    GatewayRequest gwReq(myAddr, iter->nodeAddr, seqNum, gatewayReqTime);
-                    gwReq.send(myDriver, iter->nodeAddr);
-                    iter = iter->next;
-                }
-                */
+                
             }
         }
         //For regular nodes, check whether a gatewayReq has arrived during the expected time interval

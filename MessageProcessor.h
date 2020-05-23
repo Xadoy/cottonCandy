@@ -16,9 +16,10 @@
 #define MSG_LEN_JOIN_CFM          6
 #define MSG_LEN_CHECK_ALIVE       6
 #define MSG_LEN_REPLY_ALIVE       5
-#define MSG_LEN_GATEWAY_REQ       10
+#define MSG_LEN_GATEWAY_REQ       14
 #define MSG_LEN_HEADER_NODE_REPLY 7
 
+#define MAX_LEN_DATA_NODE_REPLY 64
 
 #include "DeviceDriver.h"
 
@@ -100,8 +101,9 @@ class GatewayRequest: public GenericMessage
 public:
     byte seqNum;
     unsigned long nextReqTime;
+    unsigned long childBackoffTime;
 
-    GatewayRequest(byte* srcAddr, byte* destAddr, byte seqNum, unsigned long nextReqTime);
+    GatewayRequest(byte* srcAddr, byte* destAddr, byte seqNum, unsigned long nextReqTime, unsigned long childBackoffTime);
     int send(DeviceDriver* driver, byte* destAddr);
 };
 

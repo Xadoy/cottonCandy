@@ -110,10 +110,11 @@ ReplyAlive::ReplyAlive(byte* srcAddr, byte* destAddr) : GenericMessage(MESSAGE_R
 }
 
 /*--------------------GatewayRequest Message-------------------*/
-GatewayRequest::GatewayRequest(byte* srcAddr, byte* destAddr, byte seqNum, unsigned long nextReqTime): GenericMessage(MESSAGE_GATEWAY_REQ, srcAddr, destAddr)
+GatewayRequest::GatewayRequest(byte* srcAddr, byte* destAddr, byte seqNum, unsigned long nextReqTime, unsigned long childBackoffTime): GenericMessage(MESSAGE_GATEWAY_REQ, srcAddr, destAddr)
 {
     this->seqNum = seqNum;
     this->nextReqTime = nextReqTime;
+    this->childBackoffTime = childBackoffTime;
 }
 
 int GatewayRequest::send(DeviceDriver* driver, byte* destAddr)
@@ -129,8 +130,19 @@ int GatewayRequest::send(DeviceDriver* driver, byte* destAddr)
 
     union LongConverter converter;
 
+    /**
+     * Note that for transmitting type Long, we used C union for 
+     * converting a Long-type variable to a 4-byte array. The byte 
+     * order used in the transmission is in little endian.
+     * 
+     * TODO: An enhancement would be converting the byte order to the
+     * typical network order (i.e. Big endian), but it is not a priority. 
+     */ 
     converter.l = nextReqTime;
-    memcpy(&(msg[6]), converter.b, 4);
+    memcpy(&(msg[6]), converter.b, sizeof(converter.b));
+
+    converter.l = childBackoffTime;
+    memcpy(&(msg[10]), converter.b, sizeof(converter.b));
 
     return ( driver->send(destAddr, msg, sizeof(msg)) );
 }
@@ -284,7 +296,10 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
             memcpy(converter.b, buff + 5, 4);
             unsigned long nextReqTime = converter.l;
 
-            msg = new GatewayRequest(srcAddr, destAddr, seqNum, nextReqTime);
+            memcpy(converter.b, buff + 9, 4);
+            unsigned long childBackoffTime = converter.l;
+
+            msg = new GatewayRequest(srcAddr, destAddr, seqNum, nextReqTime, childBackoffTime);
             delete[] buff;
             break;
         }
