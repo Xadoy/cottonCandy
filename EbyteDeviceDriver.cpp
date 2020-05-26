@@ -11,7 +11,7 @@ EbyteDeviceDriver::EbyteDeviceDriver(uint8_t rx, uint8_t tx, uint8_t m0, uint8_t
     this->aux_pin = aux_pin;
     module = new SoftwareSerial(rx, tx);
 
-    if(sizeof(addr) < 2){
+    if(sizeof(addr) < EBYTE_ADDRESS_SIZE){
         Serial.println("Error: Node address must be 2-byte long");
     }else{
         myAddr[0] = addr[0];
@@ -72,10 +72,11 @@ int EbyteDeviceDriver::send(byte* destAddr, byte* msg, long msgLen){
     long totalLen = 3 + msgLen;
 
     byte* data = new byte[totalLen];
-    memcpy(data, destAddr, 2);
+    memcpy(data, destAddr, EBYTE_ADDRESS_SIZE);
     data[2] = (byte)myChannel;
     
     memcpy(data + 3, msg, msgLen);
+    /*
     Serial.print(F("Messsage to be sent 0x"));
 
     for(int i = 0; i < totalLen; i++){
@@ -83,11 +84,13 @@ int EbyteDeviceDriver::send(byte* destAddr, byte* msg, long msgLen){
         Serial.print(" ");
      }
     Serial.print("\n");
-    
+    */
     int bytesSent = module->write(data, totalLen);
 
-    //Wait for the message written to the Ebyte chip (50ms >= 50/1200)
-    delay(50);
+    //Wait for the message written to the Ebyte chip
+    //This delay is estimated by using the maximum message length (~70 Bytes) divided by the
+    //baud rate (9600 8N1 ~= 1040 bytes per second) and get ~60ms
+    delay(60);
 
     //Wait till Ebyte has transmitted the message
     while (digitalRead(this->aux_pin) != HIGH)
@@ -207,7 +210,7 @@ void EbyteDeviceDriver::setAddress(byte* addr)
     module->write(0xC0);
     module->write((byte)0x00);
     module->write(0x02);
-    module->write(addr, 2);
+    module->write(addr, EBYTE_ADDRESS_SIZE);
 
     //Block and read the reply to clear the buffer
     receiveConfigReply(5);

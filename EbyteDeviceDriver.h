@@ -6,6 +6,7 @@
 #include "SoftwareSerial.h"
 
 #define BAUD_RATE 9600
+#define EBYTE_ADDRESS_SIZE 2
 
 typedef enum 
 {
