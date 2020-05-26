@@ -25,9 +25,18 @@
 #include "DeviceDriver.h"
 #include "SoftwareSerial.h"
 
+/* for feather32u4 */
+#define RFM95_CS 8
+#define RFM95_RST 4
+#define RFM95_INT 7
+#define RF95_FREQ 915E6
 
+#define MSG_QUEUE_CAPACITY 255
 
-typedef enum 
+#define DEFAULT_SPREADING_FACTOR 7
+#define DEFAULT_CHANNEL_BW 125E3
+#define DEFAULT_CODING_RATE_DENOMINATOR 5
+typedef enum
 {
   TRANSMIT,
   CONFIG,
@@ -35,36 +44,36 @@ typedef enum
   SLEEP
 } Mode;
 
-class AdafruitDeviceDriver : public DeviceDriver{
+class AdafruitDeviceDriver : public DeviceDriver
+{
 public:
-    AdafruitDeviceDriver(byte* addr, uint8_t channel);
+  AdafruitDeviceDriver(byte *addr, long frequency = RF95_FREQ, int sf = DEFAULT_SPREADING_FACTOR, long bw = DEFAULT_CHANNEL_BW, int cr = DEFAULT_CODING_RATE_DENOMINATOR);
 
-    ~AdafruitDeviceDriver();
+  ~AdafruitDeviceDriver();
 
-    bool init();
+  bool init();
 
-    int send(byte* destAddr, byte* msg, long msgLen);
+  int send(byte *destAddr, byte *msg, long msgLen);
 
-    byte recv();
+  byte recv();
 
-    int available();
+  int available();
 
-    int getLastMessageRssi();
+  int getLastMessageRssi();
 
 private:
-    uint8_t currentMode = 0;
+  byte addr[2];
+  long freq;
+  int sf;
+  long channelBW;
+  int codingRate;
 
-    uint8_t myChannel;
-
-    /*-----------Module Registers Configuration-----------*/
-    void setAddress(byte* addr);
-    void setChannel(uint8_t channe);
-    void setNetId(uint8_t netId);
-    void setOthers(byte config);
-    uint8_t getCurrentMode();
-
-    /*-----------Helper Function-----------*/
-    void receiveConfigReply(int replyLen);
+  /*-----------Module Registers Configuration-----------*/
+  void setAddress(byte *addr);
+  void setFrequency(long frequency);
+  void setSpreadingFactor(int sf);
+  void setChannelBandwidth(long bw);
+  void setCodingRateDenominator(int cr);
 };
 
 #endif

@@ -103,16 +103,10 @@ def animate(i, ser, file):
     src_addr = ser.read(2).hex().upper()
     dest_addr = ser.read(2).hex().upper()
 
-    payload = bytes()
-    # For some messages they have an additional 1 byte payload information
-    if msg_type != TYPE_MESSAGE_JOIN and msg_type != TYPE_MESSAGE_REPLY_ALIVE and msg_type != TYPE_MESSAGE_MULTIHOP:
-        payload = ser.read(1)
-
     current_time = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
 
     log_string = current_time + " " + MESSAGE_TYPE_STRING[msg_type - 1] + ": sent from 0x" + str(src_addr) + " to 0x" \
-        + str(dest_addr) + " with payload = " + \
-        str(int.from_bytes(payload, 'big'))
+        + str(dest_addr)
 
     print(log_string)
     log_file.write(log_string)
@@ -122,6 +116,10 @@ def animate(i, ser, file):
 
     # Start to process the message
     if msg_type == TYPE_MESSAGE_JOIN or msg_type == TYPE_MESSAGE_JOIN_ACK:
+
+        # Read the extra byte in a JOIN_ACK message
+        if msg_type == TYPE_MESSAGE_JOIN_ACK:
+            ser.read(1)
 
         # Keep a record of all discovered nodes, a newly discovered node should be plotted as well
         if src_addr not in node_list:
@@ -137,21 +135,13 @@ def animate(i, ser, file):
 
             G.remove_edge(src_addr, parent)
             del edge_labels[edge_to_remove]
-            # print(str(src_addr) + " is self-healing")
-            # for e in G.edges:
-                
-            #     child, parent = e
-            #     if child == src_addr or parent == src_addr:
-            #         print("Connection " + str(e) +" is off. Removing the edge")
-                    
-            #         if edge_labels.get(e) is None:
-            #             continue
-            #         else:
-            #             G.remove_edge(child, parent)
-            #             del edge_labels[e]
-            #             break
 
     elif msg_type == TYPE_MESSAGE_JOIN_CFM:
+
+        # Read the extra byte in a JOIN_CFM message
+        if msg_type == TYPE_MESSAGE_JOIN_CFM:
+            ser.read(1)
+
         # Receiving a JOIN_CFM message means that the dest node becomes the parent of the src node
 
         # If the parent node is not yet recorded, record it
@@ -159,13 +149,19 @@ def animate(i, ser, file):
             node_list.append(src_addr)
 
 
-        edge_labels[edge] = 'Connected: ' + current_time
+        edge_labels[edge] = 'Last Seen: ' + current_time
 
         node_info[src_addr] = dest_addr
 
         G.add_edge(src_addr, dest_addr)
 
+    elif msg_type == TYPE_MESSAGE_CHECK_ALIVE:
+        # Read the extra byte in a CHECK_ALIVE message
+        if msg_type == TYPE_MESSAGE_CHECK_ALIVE:
+            ser.read(1)
+
     elif msg_type == TYPE_MESSAGE_REPLY_ALIVE:
+
         # Receiving a REPLY_ALIVE message means that the dest node has confirmed its aliveness to the src node
         if edge_labels.get(edge) == None:
             # This connection has never been seen before, add it to the graph
@@ -178,9 +174,51 @@ def animate(i, ser, file):
 
     elif msg_type == TYPE_MESSAGE_NODE_REPLY:
 
+        if src_addr not in node_list:
+            node_list.append(src_addr)
+            G.add_node(src_addr)
+
+        if dest_addr not in node_list:
+            node_list.append(dest_addr)
+            G.add_node(dest_addr)
+
+        seq_num = int.from_bytes(ser.read(1),byteorder='big')
         datalen = int.from_bytes(ser.read(1), byteorder='big')
 
-        print("Reply = " + ser.read(datalen).hex().upper())
+        '''
+        Note that the code here can result in wrong topology
+        if the program is started when the message is forwarded
+        by intermediate nodes. This is because the node reply
+        that is being forwarded has the source address of the
+        original source node. Thus, the program may create a
+        edge between the original source node and a node that 
+        is multiple hops away from the original source node.
+        A temporary solution is to always start the program
+        before starting the network or at an idle period
+        when there is no REQ nor REPLY messages on the air.
+        '''
+        if not nx.algorithms.has_path(G, src_addr, dest_addr):
+            if edge_labels.get(edge) == None:
+                G.add_edge(src_addr, dest_addr)
+
+        if edge_labels.get(edge) != None:
+            edge_labels[edge] = 'Last Seen: ' + current_time
+
+        node_info[src_addr] = dest_addr
+
+        print("Reply for SeqNum " + str(seq_num) + " = " + ser.read(datalen).hex().upper())
+
+    elif msg_type == TYPE_MESSAGE_GATEWAY_REQ:
+        
+        if src_addr not in node_list:
+            node_list.append(src_addr)
+            G.add_node(src_addr)
+
+        seq_num = int.from_bytes(ser.read(1),byteorder='big')
+        next_req_time = int.from_bytes(ser.read(4), byteorder='little')
+
+        backoff_time = int.from_bytes(ser.read(4), byteorder='little')
+        print("Next Gateway REQ (" + str(seq_num + 1) + ") in " + str(next_req_time) + "ms. Backoff time = " + str(backoff_time) + "ms")
 
     # Update the plot
     plot()

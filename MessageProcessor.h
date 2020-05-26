@@ -35,11 +35,17 @@
 #define MSG_LEN_JOIN_CFM          6
 #define MSG_LEN_CHECK_ALIVE       6
 #define MSG_LEN_REPLY_ALIVE       5
-#define MSG_LEN_GATEWAY_REQ       6
+#define MSG_LEN_GATEWAY_REQ       14
 #define MSG_LEN_HEADER_NODE_REPLY 7
 
+#define MAX_LEN_DATA_NODE_REPLY 64
 
 #include "DeviceDriver.h"
+
+union LongConverter{
+    unsigned long l;
+    byte b[4];
+};
 
 /* We will use polymorphism here */
 
@@ -113,8 +119,10 @@ class GatewayRequest: public GenericMessage
 {
 public:
     byte seqNum;
+    unsigned long nextReqTime;
+    unsigned long childBackoffTime;
 
-    GatewayRequest(byte* srcAddr, byte* destAddr, byte seqNum);
+    GatewayRequest(byte* srcAddr, byte* destAddr, byte seqNum, unsigned long nextReqTime, unsigned long childBackoffTime);
     int send(DeviceDriver* driver, byte* destAddr);
 };
 
@@ -133,7 +141,21 @@ public:
 };
 
 /*
- * Read from device buffer, construct a message and return a pointer to it
+ * Reads from device buffer, constructs a message and returns a pointer to it.
+ * The timeout value will be used for terminating the receiving in the following
+ * 2 scenarios:
+ * 
+ *      1. No valid message has been received
+ *      2. Valid messages are received but are truncated due to collisions or
+ *         other wireless signal corruption. In this case, the program can
+ *         block to read the remaining data. For messages with variable length 
+ *         (i.e. NodeReply). They can be received but the "length" field can be 
+ *         corrupted. Thus, the program might block to read an arbitarily long 
+ *         byte array, which causes the program to hang.
+ * 
+ * Note that the timeout value does not limit the program run-time. The actual run
+ * time might exceed 1 second.
+ * 
  * !! Caller needs to free the memory after using the returned pointer
  */
 GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout);
@@ -143,6 +165,6 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout);
  * Read certain bytes from device buffer
  * !! Caller needs to free the memory after using the returned pointer
  */
-byte* readMsgFromBuff(DeviceDriver* driver, uint8_t msgLen);
+byte* readMsgFromBuff(DeviceDriver* driver, uint8_t msgLen, unsigned long timeout);
 
 #endif

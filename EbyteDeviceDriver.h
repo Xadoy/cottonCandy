@@ -26,6 +26,7 @@
 #include "SoftwareSerial.h"
 
 #define BAUD_RATE 9600
+#define EBYTE_ADDRESS_SIZE 2
 
 typedef enum 
 {
@@ -60,7 +61,7 @@ private:
     uint8_t aux_pin;
     uint8_t currentMode = 0;
 
-    byte* myAddr;
+    byte myAddr[2];
     uint8_t myChannel;
 
     /*-----------Module Registers Configuration-----------*/
@@ -69,6 +70,11 @@ private:
     void setNetId(uint8_t netId);
     void setOthers(byte config);
     void setEnableRSSI();
+
+    /**
+     * The function sets the air rate to 9.6kbps by default
+     */ 
+    void setAirRate();
 
     void enterConfigMode();
     void enterTransMode();

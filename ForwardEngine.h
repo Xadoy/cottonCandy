@@ -55,8 +55,34 @@
 /* The minimum backoff time when the node reply back */
 #define MIN_BACKOFF_TIME 100
 
-/* The maximum backoff time when the node reply back */
-#define MAX_BACKOFF_TIME 3000
+/** The maximum backoff time when tranmitting a JoinACK message
+ * 
+ * Unlike the backoff time for sending NodeReply and forwarding GatewayReq, this is a static value
+ * since the chance of collisions depends on the number of nearby connected nodes, which can not be
+ * easily inferred. Also, setting the backoff time too long (DISCOVERY_TIMEOUT) for JoinACK can 
+ * results in a consistent discovery timeout.
+*/
+#define MAX_JOIN_ACK_BACKOFF_TIME 3000
+
+/** The maximum backoff time for one child node to send NodeReply or forward GatewayReq 
+* 
+Parent node (including gateway) uses this value and multiply it with the number of child nodes
+* to inform the child nodes of the maximum backoff time they have to wait.
+*/
+#define MAX_BACKOFF_TIME_FOR_ONE_CHILD 3000
+
+/** Default time for waiting for the next GatewayRequest is a day (24 hours = 86,400,000 milliseconds).
+ * If the user do not specify the GatewayReq time during setup,  the node will wait forever for
+ * the next GatewayRequest. If connection is broken before the next GatewayRequest comes in,
+ * the node will not self-heal until a full day is passed
+*/
+#define DEFAULT_NEXT_GATEWAY_REQ_TIME 86400E3
+
+/** Gateway request may arrive later than expected due to transmission and processing delays.
+ * The node marks a missing gateway request if none is received for 
+ *         (NEXT_GATEWAY_REQ_TIME_TOLERANCE_FACTOR * Advertised next request time interval)
+*/
+#define NEXT_GATEWAY_REQ_TIME_TOLERANCE_FACTOR 1.2
 
 struct ParentInfo{
     unsigned long lastAliveTime;
@@ -175,7 +201,7 @@ private:
     /**
      * Time interval for gateway to request data from nodes
      */
-    unsigned long gatewayReqTime = 0; 
+    unsigned long gatewayReqTime = DEFAULT_NEXT_GATEWAY_REQ_TIME; 
 
     /**
      * The last time that gateway sends out a request
@@ -186,6 +212,16 @@ private:
      * Sequence Number used to identify each Gateway Request
      */ 
     uint8_t seqNum = 0;
+
+    /**
+     * Maximum time value for the random backoff time before transmitting
+     * gateway requests and node replies.
+     * 
+     * This value can be dynamically changed by the parent node based on its
+     * number of child nodes. The parent node informs the child node the new
+     * max backoff time in the Gateway Request message. 
+     */
+    unsigned long maxBackoffTime = MAX_BACKOFF_TIME_FOR_ONE_CHILD;
 
     /**
      * callback function pointer when Node receives Gateway Requests

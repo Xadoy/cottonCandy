@@ -129,9 +129,11 @@ ReplyAlive::ReplyAlive(byte* srcAddr, byte* destAddr) : GenericMessage(MESSAGE_R
 }
 
 /*--------------------GatewayRequest Message-------------------*/
-GatewayRequest::GatewayRequest(byte* srcAddr, byte* destAddr, byte seqNum): GenericMessage(MESSAGE_GATEWAY_REQ, srcAddr, destAddr)
+GatewayRequest::GatewayRequest(byte* srcAddr, byte* destAddr, byte seqNum, unsigned long nextReqTime, unsigned long childBackoffTime): GenericMessage(MESSAGE_GATEWAY_REQ, srcAddr, destAddr)
 {
     this->seqNum = seqNum;
+    this->nextReqTime = nextReqTime;
+    this->childBackoffTime = childBackoffTime;
 }
 
 int GatewayRequest::send(DeviceDriver* driver, byte* destAddr)
@@ -144,6 +146,22 @@ int GatewayRequest::send(DeviceDriver* driver, byte* destAddr)
     byte msg[MSG_LEN_GATEWAY_REQ];
     copyTypeAndAddr(msg);
     msg[5] = seqNum;
+
+    union LongConverter converter;
+
+    /**
+     * Note that for transmitting type Long, we used C union for 
+     * converting a Long-type variable to a 4-byte array. The byte 
+     * order used in the transmission is in little endian.
+     * 
+     * TODO: An enhancement would be converting the byte order to the
+     * typical network order (i.e. Big endian), but it is not a priority. 
+     */ 
+    converter.l = nextReqTime;
+    memcpy(&(msg[6]), converter.b, sizeof(converter.b));
+
+    converter.l = childBackoffTime;
+    memcpy(&(msg[10]), converter.b, sizeof(converter.b));
 
     return ( driver->send(destAddr, msg, sizeof(msg)) );
 }
@@ -197,7 +215,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
         case MESSAGE_JOIN:
         {
             // we have already read the msg type
-            byte* buff = readMsgFromBuff(driver, MSG_LEN_JOIN - 1);
+            byte* buff = readMsgFromBuff(driver, MSG_LEN_JOIN - 1, timeout);
 
             // get what we need for Join
             byte srcAddr[2];
@@ -213,7 +231,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
         case MESSAGE_JOIN_ACK:
         {
             // we have already read the msg type
-            byte* buff = readMsgFromBuff(driver, MSG_LEN_JOIN_ACK - 1);
+            byte* buff = readMsgFromBuff(driver, MSG_LEN_JOIN_ACK - 1, timeout);
 
             // get what we need for JoinAck
             byte srcAddr[2];
@@ -231,7 +249,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
         case MESSAGE_JOIN_CFM:
         {
             // we have already read the msg type
-            byte* buff = readMsgFromBuff(driver, MSG_LEN_JOIN_CFM - 1);
+            byte* buff = readMsgFromBuff(driver, MSG_LEN_JOIN_CFM - 1, timeout);
 
             // get what we need for JoinCFM
             byte srcAddr[2];
@@ -249,7 +267,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
         case MESSAGE_CHECK_ALIVE:
         {
             // we have already read the msg type
-            byte* buff = readMsgFromBuff(driver, MSG_LEN_CHECK_ALIVE - 1);
+            byte* buff = readMsgFromBuff(driver, MSG_LEN_CHECK_ALIVE - 1, timeout);
 
             // get what we need for CheckAlive
             byte srcAddr[2];
@@ -267,7 +285,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
         case MESSAGE_REPLY_ALIVE:
         {
             // we have already read the msg type
-            byte* buff = readMsgFromBuff(driver, MSG_LEN_REPLY_ALIVE - 1);
+            byte* buff = readMsgFromBuff(driver, MSG_LEN_REPLY_ALIVE - 1, timeout);
 
             // get what we need for ReplyAlive
             byte srcAddr[2];
@@ -283,7 +301,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
         case MESSAGE_GATEWAY_REQ:
         {
             // we have already read the msg type
-            byte* buff = readMsgFromBuff(driver, MSG_LEN_GATEWAY_REQ - 1);
+            byte* buff = readMsgFromBuff(driver, MSG_LEN_GATEWAY_REQ - 1, timeout);
 
             // get what we need for GatewayRequest
             byte srcAddr[2];
@@ -291,9 +309,16 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
             byte destAddr[2];
             memcpy(destAddr, buff + 2, 2);
 
-            byte depth = buff[4];
+            byte seqNum = buff[4];
 
-            msg = new GatewayRequest(srcAddr, destAddr, depth);
+            union LongConverter converter;
+            memcpy(converter.b, buff + 5, 4);
+            unsigned long nextReqTime = converter.l;
+
+            memcpy(converter.b, buff + 9, 4);
+            unsigned long childBackoffTime = converter.l;
+
+            msg = new GatewayRequest(srcAddr, destAddr, seqNum, nextReqTime, childBackoffTime);
             delete[] buff;
             break;
         }
@@ -304,7 +329,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
             // need to know the data length before getting the data
 
             // get Header first
-            byte* headerBuff = readMsgFromBuff(driver, MSG_LEN_HEADER_NODE_REPLY - 1);
+            byte* headerBuff = readMsgFromBuff(driver, MSG_LEN_HEADER_NODE_REPLY - 1, timeout);
             byte srcAddr[2];
             memcpy(srcAddr, headerBuff, 2);
             byte destAddr[2];
@@ -313,7 +338,7 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
             byte seqNum = headerBuff[4];
             byte dataLength = headerBuff[5];
 
-            byte* data = readMsgFromBuff(driver, dataLength);
+            byte* data = readMsgFromBuff(driver, dataLength, timeout);
 
             msg = new NodeReply(srcAddr, destAddr, seqNum, dataLength, data);
             delete[] data;
@@ -333,13 +358,15 @@ GenericMessage* receiveMessage(DeviceDriver* driver, unsigned long timeout)
 
 
 /*-------------------- Helpers -------------------*/
-byte* readMsgFromBuff(DeviceDriver* driver, uint8_t msgLen)
+byte* readMsgFromBuff(DeviceDriver* driver, uint8_t msgLen, unsigned long timeout)
 {
     byte* buff = new byte[msgLen];
 
     int i = 0;
+
+    unsigned long startTime = getTimeMillis();
     
-    while(i < msgLen)
+    while(i < msgLen && (unsigned long)(getTimeMillis() - startTime) < timeout)
     {
         if(driver->available())
         {
