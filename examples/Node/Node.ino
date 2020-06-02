@@ -69,9 +69,12 @@ void setup()
   Serial.begin(57600);
 
   // Wait for serial port to connect.
+  // Please comment out this while loop when using Adafruit feather or other ATmega32u4 boards 
+  // if you do not want to connect Adafruit feather to a USB port for debugging. Otherwise, the
+  // feather board does not start until a serial monitor is opened.
   while (!Serial)
   {
-    ;
+    ; // wait for serial port to connect. Needed for native USB port only
   }
 
   // In this example, we will be using an EByte E22 LoRa transceiver
