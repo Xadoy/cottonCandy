@@ -17,7 +17,6 @@
     along with CottonCandy.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 #include "ForwardEngine.h"
 #include <string.h>
 
@@ -172,15 +171,17 @@ bool ForwardEngine::join()
                 {
                     //Case 1: Both the current parent candidate and new node are connected to the gateway
                     //Choose the candidate with the minimum hops to the gateway while the RSSI is over the threshold
-                    //Note that the RSSI value returned here is positive, thus the smaller RSSI is better.
-
-                    if (msg->rssi >= RSSI_THRESHOLD && newHopsToGateway < bestParentCandidate.hopsToGateway)
+                    //If the hop counts are the same, pick the one with the best signal strength
+                    if (msg->rssi >= RSSI_THRESHOLD)
                     {
-                        memcpy(bestParentCandidate.parentAddr, nodeAddr, 2);
-                        bestParentCandidate.hopsToGateway = newHopsToGateway;
-                        bestParentCandidate.Rssi = msg->rssi;
+                        if (newHopsToGateway < bestParentCandidate.hopsToGateway || (newHopsToGateway == bestParentCandidate.hopsToGateway && msg->rssi > bestParentCandidate.Rssi))
+                        {
+                            memcpy(bestParentCandidate.parentAddr, nodeAddr, 2);
+                            bestParentCandidate.hopsToGateway = newHopsToGateway;
+                            bestParentCandidate.Rssi = msg->rssi;
 
-                        Serial.println(F("This is a better parent (closer to gateway)"));
+                            Serial.println(F("This is a better parent"));
+                        }
                     }
                 }
                 else
@@ -436,7 +437,7 @@ bool ForwardEngine::run()
                     unsigned long backoff = random(MIN_BACKOFF_TIME, maxBackoffTime);
                     Serial.print(F("Sleep for some time before replying back: "));
                     Serial.println(backoff);
-                    
+
                     sleepForMillis(backoff);
 
                     // Use callback to get node data
@@ -571,7 +572,6 @@ bool ForwardEngine::run()
                 //Dixin Wu update: what if we simply broadcast the gatewayReq
                 GatewayRequest gwReq(myAddr, BROADCAST_ADDR, seqNum, gatewayReqTime, childBackoffTime);
                 gwReq.send(myDriver, BROADCAST_ADDR);
-                
             }
         }
         //For regular nodes, check whether a gatewayReq has arrived during the expected time interval
