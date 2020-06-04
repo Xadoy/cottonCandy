@@ -364,7 +364,20 @@ bool ForwardEngine::run()
             }
             case MESSAGE_JOIN_CFM:
             {
-                //Add the new child to the linked list (Insert in the beginning of the linked list)
+                ChildNode *iter = childrenList;
+
+                while (iter != nullptr){
+                    if(iter->nodeAddr[0] == msg->srcAddr[0] && iter->nodeAddr[1] == msg->srcAddr[1]){
+                        break;
+                    }
+                    iter = iter->next;
+                }
+                // If the child node has already been in the children list (i.e. it reconnects to this
+                // parent node), do not add it to the list
+                if (iter != nullptr){
+                    break;
+                }
+                //Add the new child to the linked list (Insert at the beginning of the linked list)
 
                 ChildNode *node = new ChildNode();
                 node->nodeAddr[0] = msg->srcAddr[0];
