@@ -87,7 +87,7 @@ public:
     /**
      * Accepts a function as an argument which will be called when a node reply arrives
      */
-    void onReceiveResponse(void(*callback)(byte*, byte));
+    void onReceiveResponse(void(*callback)(byte*, byte, byte*));
 
 
 private:

@@ -157,7 +157,7 @@ public:
     unsigned long getGatewayReqTime();
 
     void onReceiveRequest(void(*callback)(byte**, byte*));
-    void onReceiveResponse(void(*callback)(byte*, byte));
+    void onReceiveResponse(void(*callback)(byte*, byte, byte*));
 
 
 private:
@@ -231,9 +231,9 @@ private:
 
     /**
      * callback function pointer when Gateway receives responses from Nodes
-     * argument is msg and num of bytes
+     * argument is msg, num of bytes and sender address
      */ 
-    void (*onRecvResponse)(byte*, byte);
+    void (*onRecvResponse)(byte*, byte, byte*);
 
 
 };

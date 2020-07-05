@@ -85,7 +85,7 @@ void ForwardEngine::onReceiveRequest(void (*callback)(byte **, byte *))
 {
     this->onRecvRequest = callback;
 }
-void ForwardEngine::onReceiveResponse(void (*callback)(byte *, byte))
+void ForwardEngine::onReceiveResponse(void (*callback)(byte *, byte, byte *))
 {
     this->onRecvResponse = callback;
 }
@@ -513,7 +513,7 @@ bool ForwardEngine::run()
                     Serial.print(F("Node Reply Sequence number: "));
                     Serial.println(((NodeReply *)msg)->seqNum);
                     if (onRecvResponse)
-                        onRecvResponse(((NodeReply *)msg)->data, ((NodeReply *)msg)->dataLength);
+                        onRecvResponse(((NodeReply *)msg)->data, ((NodeReply *)msg)->dataLength, ((NodeReply *)msg)->srcAddr);
                 }
                 // Node should forward this up to its parent
                 else

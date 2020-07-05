@@ -60,7 +60,7 @@ unsigned long LoRaMesh::getGatewayReqTime()
 void LoRaMesh::onReceiveRequest(void(*callback)(byte**, byte*)) {
   myEngine->onReceiveRequest(callback);
 }
-void LoRaMesh::onReceiveResponse(void(*callback)(byte*, byte)) {
+void LoRaMesh::onReceiveResponse(void(*callback)(byte*, byte, byte*)) {
   myEngine->onReceiveResponse(callback);
 }
 

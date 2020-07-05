@@ -32,8 +32,8 @@
 #define LORA_AUX 4
 
 // The time (milliseconds) between gateway requesting data
-// Currently set to every 300 seconds (5 minutes)
-#define GATEWAY_REQ_TIME 300000
+// Currently set to every 30 seconds
+#define GATEWAY_REQ_TIME 30000
 
 LoRaMesh *manager;
 
@@ -44,19 +44,48 @@ DeviceDriver *myDriver;
 byte myAddr[2] = {0x80, 0xA0};
 
 /**
+ * In this example, we will use union to encode and decode the long-type integer we are sending
+ * in the network
+ */
+union LongToBytes{
+  long l;
+  byte b[sizeof(long)];
+};
+
+/**
  * Callback function that will be called when Gateway receives the reply from a node
  */
-void onReciveResponse(byte *data, byte len)
+void onReciveResponse(byte *data, byte len, byte *srcAddr)
 {
 
-  // In the example, we simply print out the reply message from the node
-  Serial.print(F("Gateway received a node reply: "));
+  // In the example, we will first print out the reply message in HEX from the node
+  Serial.print(F("Gateway received a node reply from Node 0x"));
+  Serial.print(srcAddr[1], HEX);
+  Serial.print(srcAddr[2], HEX);
+
+  Serial.print(F(". Data(HEX): "));
 
   for (int i = 0; i < len; i++)
   {
     Serial.print((data[i]), HEX);
   }
-  Serial.println(".");
+  Serial.print(".");
+
+  // Since nodes are sending 4-byte long numbers (See example/Node/Node.ino), we can
+  // convert the byte array back to a long-type integer
+  if(len == 4){
+
+    // Convert the byte array back to a long-type integer
+    union LongToBytes myConverter;
+    memcpy(myConverter.b, data, len);
+    long value = myConverter.l;
+
+    Serial.print(" Received integer = ");
+    Serial.print(value);
+  }
+
+  Serial.print('\n');
+
 }
 
 void setup()

@@ -40,28 +40,49 @@ DeviceDriver *myDriver;
 byte myAddr[2] = {0x00, 0xA0};
 
 /**
- * Callback function that will be called when the node receives the request from the gateway
- * and needs to reply back
+ * In this example, we will use union to encode and decode the long-type integer we are sending
+ * in the network
+ */
+union LongToBytes{
+  long l;
+  byte b[sizeof(long)];
+};
+
+/**
+ * Callback function that is called when the node receives the request from the gateway
+ * and needs to reply back. Users can read sensor value, do some processing and send data back
+ * to the gateway.
+ * 
+ * "data" points to the payload portion of the reply packet that will be sent to the gateway
+ * once the function returns. Users can write their own sensor value into the "data" byte array.
+ * The length of the payload can be specified by writting it to "len"
  */
 void onReceiveRequest(byte **data, byte *len)
 {
 
-  // In the example, we simply send a series of HEX number of "ABCDEF" followed with the least significant byte of the node address
+  // In the example, we simply send a random integer value to the gateway
   Serial.println("onReciveRequest callback");
-  (*data)[0] = 0xA;
-  (*data)[1] = 0xB;
-  (*data)[2] = 0xC;
-  (*data)[3] = 0xD;
-  (*data)[4] = 0xE;
-  (*data)[5] = 0xF;
-  (*data)[6] = 0xA;
-  (*data)[7] = 0x0;
-  *len = 0x08;
-  for (int i = 0; i < *len; i++)
-  {
-    Serial.print(((*data)[i]), HEX);
-  }
-  Serial.print('\n');
+
+  // Generate a random value from 0 to 1000
+  // In practice, this should be a sensor reading
+  long sensorValue = random(0,1000);
+
+  Serial.print(F("Sending number = "));
+  Serial.print(sensorValue);
+  Serial.println(F(" to the gateway"));
+
+  // Specify the length of the payload
+  *len = sizeof(long);
+
+  // Encode this long-type value into a 4-byte array
+  // Note: The encoding here using C++ union is little-endian. Although the common practice in networking
+  // is big-endian, to make things simple, we uses the same union in both the sender(Node) and receiver(Gateway)
+  // such that the number can be decoded correctly.
+  union LongToBytes myConverter;
+  myConverter.l = sensorValue;
+
+  // Copy the encoded 4-byte array into the data (aka payload)
+  memcpy(*data, myConverter.b, *len);
 }
 
 void setup()
