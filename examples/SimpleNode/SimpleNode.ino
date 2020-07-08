@@ -17,15 +17,18 @@
     along with CottonCandy.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+/**
+ * This example demonstrates how to join a tree-based mesh network as a 
+ * LoRa node and sends a simple string to the gateway upon requests.
+ * 
+ * For sending more complicated data (e.g. bytes and numbers) over the 
+ * network, please refer to the "examples/Node/Node.ino".
+ */
+
 #include <LoRaMesh.h>
 #include <EbyteDeviceDriver.h>
 // Uncomment the next line for using Adafruit LoRa Feather
 // #include <AdafruitDeviceDriver.h>
-
-/**
- * This example demonstrates how to join a tree-based mesh network as a 
- * LoRa node and sends a random integer to the gateway upon requests.
- */ 
 
 /**
  * Define pins for connection with Ebyte LoRa transceiver
@@ -45,15 +48,6 @@ DeviceDriver *myDriver;
 byte myAddr[2] = {0x00, 0xA0};
 
 /**
- * In this example, we will use union to encode and decode the long-type integer we are sending
- * in the network
- */
-union LongToBytes{
-  long l;
-  byte b[sizeof(long)];
-};
-
-/**
  * Callback function that is called when the node receives the request from the gateway
  * and needs to reply back. Users can read sensor value, do some processing and send data back
  * to the gateway.
@@ -65,29 +59,20 @@ union LongToBytes{
 void onReceiveRequest(byte **data, byte *len)
 {
 
-  // In the example, we simply send a random integer value to the gateway
+  // In the example, we simply send "Hello World" to the gateway
   Serial.println("onReciveRequest callback");
 
-  // Generate a random value from 0 to 1000
-  // In practice, this should be a sensor reading
-  long sensorValue = random(0,1000);
+  // Construct our string
+  char myString[] = "Hello World";
 
-  Serial.print(F("Sending number = "));
-  Serial.print(sensorValue);
-  Serial.println(F(" to the gateway"));
+  // Specify the length of the string
+  *len = sizeof(myString);
 
-  // Specify the length of the payload
-  *len = sizeof(long);
+  // Copy the string into the data (aka payload)
+  strncpy(*data, myString, *len);
 
-  // Encode this long-type value into a 4-byte array
-  // Note: The encoding here using C++ union is little-endian. Although the common practice in networking
-  // is big-endian, to make things simple, we use the same union in both the sender(Node) and receiver(Gateway)
-  // such that the number can be decoded correctly.
-  union LongToBytes myConverter;
-  myConverter.l = sensorValue;
-
-  // Copy the encoded 4-byte array into the data (aka payload)
-  memcpy(*data, myConverter.b, *len);
+  Serial.print("Sending: ");
+  Serial.println(myString);
 }
 
 void setup()

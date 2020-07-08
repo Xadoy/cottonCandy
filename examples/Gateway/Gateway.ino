@@ -17,6 +17,11 @@
     along with CottonCandy.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+/**
+ * This example demonstrates how to create a gateway in a tree-based mesh network 
+ * and receives a sensor values from nodes in the network.
+ */ 
+
 #include <LoRaMesh.h>
 #include <EbyteDeviceDriver.h>
 // Uncomment the next line for using Adafruit LoRa Feather

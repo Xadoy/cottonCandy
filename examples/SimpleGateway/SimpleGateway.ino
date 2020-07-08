@@ -17,77 +17,56 @@
     along with CottonCandy.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+/**
+ * This example demonstrates how to create a gateway in a tree-based mesh network 
+ * and receive strings from nodes in the network
+ * 
+ * For receiving more complicated data (e.g. bytes and numbers) over the 
+ * network, please refer to the "examples/Gateway/Gateway.ino".
+ */
+
 #include <LoRaMesh.h>
 #include <EbyteDeviceDriver.h>
 // Uncomment the next line for using Adafruit LoRa Feather
 // #include <AdafruitDeviceDriver.h>
 
 /**
- * This example demonstrates how to join a tree-based mesh network as a 
- * LoRa node and sends a random integer to the gateway upon requests.
- */ 
-
-/**
  * Define pins for connection with Ebyte LoRa transceiver
- */
+ */ 
 #define LORA_RX 10
 #define LORA_TX 11
 #define LORA_M0 2
 #define LORA_M1 3
 #define LORA_AUX 4
 
+// The time (milliseconds) between gateway requesting data
+// Currently set to every 30 seconds
+#define GATEWAY_REQ_TIME 30000
+
 LoRaMesh *manager;
 
 DeviceDriver *myDriver;
 
-// 2-byte long address
-// For regular nodes: The first bit of the address is 0
-byte myAddr[2] = {0x00, 0xA0};
+// 2-byte long address 
+// For Gateway only: The first bit of the address has to be 1
+byte myAddr[2] = {0x80, 0xA0};
 
 /**
- * In this example, we will use union to encode and decode the long-type integer we are sending
- * in the network
+ * Callback function that will be called when Gateway receives the reply from a node
  */
-union LongToBytes{
-  long l;
-  byte b[sizeof(long)];
-};
-
-/**
- * Callback function that is called when the node receives the request from the gateway
- * and needs to reply back. Users can read sensor value, do some processing and send data back
- * to the gateway.
- * 
- * "data" points to the payload portion of the reply packet that will be sent to the gateway
- * once the function returns. Users can write their own sensor value into the "data" byte array.
- * The length of the payload can be specified by writting it to "len"
- */
-void onReceiveRequest(byte **data, byte *len)
+void onReciveResponse(byte *data, byte len, byte *srcAddr)
 {
 
-  // In the example, we simply send a random integer value to the gateway
-  Serial.println("onReciveRequest callback");
+  // In this example, we will print out the reply message
+  Serial.print(F("Gateway received a node reply from Node 0x"));
+  Serial.print(srcAddr[1], HEX);
+  Serial.print(srcAddr[2], HEX);
 
-  // Generate a random value from 0 to 1000
-  // In practice, this should be a sensor reading
-  long sensorValue = random(0,1000);
+  Serial.print(F(". Data: "));
 
-  Serial.print(F("Sending number = "));
-  Serial.print(sensorValue);
-  Serial.println(F(" to the gateway"));
+  // Print out the string sent by the node
+  Serial.println((char*)data);
 
-  // Specify the length of the payload
-  *len = sizeof(long);
-
-  // Encode this long-type value into a 4-byte array
-  // Note: The encoding here using C++ union is little-endian. Although the common practice in networking
-  // is big-endian, to make things simple, we use the same union in both the sender(Node) and receiver(Gateway)
-  // such that the number can be decoded correctly.
-  union LongToBytes myConverter;
-  myConverter.l = sensorValue;
-
-  // Copy the encoded 4-byte array into the data (aka payload)
-  memcpy(*data, myConverter.b, *len);
 }
 
 void setup()
@@ -108,19 +87,24 @@ void setup()
 
   // Uncomment the next line for using Adafruit LoRa Feather
   // myDriver = new AdafruitDeviceDriver(myAddr);
+
+  // Initialize the driver
   myDriver->init();
 
   // Create a LoRaMesh object
   manager = new LoRaMesh(myAddr, myDriver);
 
+  // For Gateway only: Set up the time interval between requests
+  manager->setGatewayReqTime(GATEWAY_REQ_TIME);
+
   // Set up the callback funtion
-  manager->onReceiveRequest(onReceiveRequest);
+  manager->onReceiveResponse(onReciveResponse);
 }
 
 void loop()
 {
   Serial.println("Loop starts");
 
-  // Start the node
+  // Start the gateway
   manager->run();
 }

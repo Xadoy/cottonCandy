@@ -1,6 +1,6 @@
 
 .DS_Store
-.vscode/settings.json
 *.dot
 log.txt
 examples/Test_Programs
+.vscode/*
